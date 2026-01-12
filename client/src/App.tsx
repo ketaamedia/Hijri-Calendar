@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import Home from "@/pages/home";
 import SettingsPage from "@/pages/settings";
+import ExportPage from "@/pages/export";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/export" component={ExportPage} />
       <Route component={NotFound} />
     </Switch>
   );

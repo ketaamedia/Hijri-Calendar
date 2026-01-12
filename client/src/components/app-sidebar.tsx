@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EventModal } from "./events/EventModal";
-import { ExportModal } from "./export/ExportModal";
 
 interface AppSidebarProps {
   isDark: boolean;
@@ -40,7 +39,6 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
   const [location] = useLocation();
   const { view, setView, currentDate, settings, hijriOverrides } = useCalendarStore();
   const [eventModalOpen, setEventModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const hijri = gregorianToHijri(currentDate, hijriOverrides);
 
@@ -130,12 +128,14 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => setExportModalOpen(true)}
-                    tooltip="تصدير PDF"
-                    data-testid="button-export"
+                    asChild
+                    isActive={location === "/export"}
+                    tooltip="تصدير المناسبات"
                   >
-                    <FileDown className="h-4 w-4" />
-                    <span>تصدير PDF</span>
+                    <Link href="/export" data-testid="link-export">
+                      <FileDown className="h-4 w-4" />
+                      <span>تصدير المناسبات</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -178,7 +178,6 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
       </Sidebar>
 
       <EventModal open={eventModalOpen} onOpenChange={setEventModalOpen} />
-      <ExportModal open={exportModalOpen} onOpenChange={setExportModalOpen} />
     </>
   );
 }
