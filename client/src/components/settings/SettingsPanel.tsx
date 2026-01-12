@@ -1,0 +1,245 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useCalendarStore } from "@/hooks/use-calendar-store";
+import { hijriMonthNames } from "@shared/schema";
+import { getCurrentHijriYear, toArabicNumerals } from "@/lib/hijri-utils";
+import { Plus, Trash2, Settings } from "lucide-react";
+
+export function SettingsPanel() {
+  const {
+    settings,
+    updateSettings,
+    hijriOverrides,
+    addHijriOverride,
+    deleteHijriOverride,
+  } = useCalendarStore();
+
+  const [newOverride, setNewOverride] = useState({
+    hijriYear: getCurrentHijriYear(),
+    hijriMonth: 1,
+    gregorianStartDate: new Date().toISOString().split("T")[0],
+  });
+
+  const handleAddOverride = async () => {
+    const id = crypto.randomUUID();
+    await addHijriOverride({ ...newOverride, id });
+    setNewOverride({
+      hijriYear: getCurrentHijriYear(),
+      hijriMonth: 1,
+      gregorianStartDate: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  const currentHijriYear = getCurrentHijriYear();
+  const hijriYears = Array.from({ length: 10 }, (_, i) => currentHijriYear - 2 + i);
+
+  return (
+    <div className="space-y-6 p-6" data-testid="settings-panel">
+      <div className="flex flex-row-reverse items-center gap-3 mb-6">
+        <Settings className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-bold text-foreground" data-testid="text-settings-title">الإعدادات</h1>
+      </div>
+
+      <Card data-testid="card-calendar-settings">
+        <CardHeader>
+          <CardTitle>إعدادات التقويم</CardTitle>
+          <CardDescription>
+            تخصيص طريقة عرض التقويم والتواريخ
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-row-reverse items-center justify-between">
+            <div className="space-y-0.5 text-right">
+              <Label htmlFor="hijri-enabled">تفعيل التقويم الهجري</Label>
+              <p className="text-sm text-muted-foreground">
+                عرض التاريخ الهجري بجانب الميلادي
+              </p>
+            </div>
+            <Switch
+              id="hijri-enabled"
+              checked={settings.hijriEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ hijriEnabled: checked })
+              }
+              data-testid="switch-hijri-enabled"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>العرض الافتراضي</Label>
+            <Select
+              value={settings.defaultView}
+              onValueChange={(value: "monthly" | "weekly" | "yearly") =>
+                updateSettings({ defaultView: value })
+              }
+            >
+              <SelectTrigger data-testid="select-default-view">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly" data-testid="option-view-monthly">شهري</SelectItem>
+                <SelectItem value="weekly" data-testid="option-view-weekly">أسبوعي</SelectItem>
+                <SelectItem value="yearly" data-testid="option-view-yearly">سنوي</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>مرجعية التقويم الهجري</Label>
+            <Select
+              value={settings.hijriReference}
+              onValueChange={(value: "khamenei" | "manual") =>
+                updateSettings({ hijriReference: value })
+              }
+            >
+              <SelectTrigger data-testid="select-hijri-reference">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="khamenei" data-testid="option-reference-khamenei">
+                  السيد القائد علي الخامنئي (دام ظله)
+                </SelectItem>
+                <SelectItem value="manual" data-testid="option-reference-manual">تحديد يدوي</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground text-right" data-testid="text-reference-description">
+              {settings.hijriReference === "khamenei"
+                ? "التقويم الهجري معتمد على الرؤية الشرعية لثبوت الهلال حسب رأي سماحة السيد القائد"
+                : "يمكنك تحديد بداية كل شهر هجري يدوياً"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {settings.hijriReference === "manual" && (
+        <Card data-testid="card-hijri-overrides">
+          <CardHeader>
+            <CardTitle>تعديل بداية الأشهر الهجرية</CardTitle>
+            <CardDescription>
+              تحديد تاريخ بداية الأشهر الهجرية يدوياً وفق الإعلانات الرسمية
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="space-y-2">
+                <Label>السنة الهجرية</Label>
+                <Select
+                  value={newOverride.hijriYear.toString()}
+                  onValueChange={(v) =>
+                    setNewOverride({ ...newOverride, hijriYear: parseInt(v) })
+                  }
+                >
+                  <SelectTrigger data-testid="select-override-year">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hijriYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {toArabicNumerals(year)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>الشهر الهجري</Label>
+                <Select
+                  value={newOverride.hijriMonth.toString()}
+                  onValueChange={(v) =>
+                    setNewOverride({ ...newOverride, hijriMonth: parseInt(v) })
+                  }
+                >
+                  <SelectTrigger data-testid="select-override-month">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hijriMonthNames.map((name, index) => (
+                      <SelectItem key={index} value={(index + 1).toString()}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>تاريخ البداية الميلادي</Label>
+                <Input
+                  type="date"
+                  value={newOverride.gregorianStartDate}
+                  onChange={(e) =>
+                    setNewOverride({
+                      ...newOverride,
+                      gregorianStartDate: e.target.value,
+                    })
+                  }
+                  data-testid="input-override-date"
+                />
+              </div>
+
+              <Button
+                onClick={handleAddOverride}
+                className="gap-2"
+                data-testid="button-add-override"
+              >
+                <Plus className="h-4 w-4" />
+                إضافة
+              </Button>
+            </div>
+
+            {hijriOverrides.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-sm font-medium mb-3 text-right">التعديلات الحالية</h4>
+                <div className="space-y-2">
+                  {hijriOverrides.map((override) => (
+                    <div
+                      key={override.id}
+                      className="flex flex-row-reverse items-center justify-between p-3 bg-muted rounded-lg"
+                      data-testid={`override-item-${override.id}`}
+                    >
+                      <div className="text-sm text-right">
+                        <span className="font-medium" data-testid={`text-override-month-${override.id}`}>
+                          {hijriMonthNames[override.hijriMonth - 1]}{" "}
+                          {toArabicNumerals(override.hijriYear)}
+                        </span>
+                        <span className="text-muted-foreground mx-2">←</span>
+                        <span className="text-muted-foreground" data-testid={`text-override-date-${override.id}`}>
+                          يبدأ في {override.gregorianStartDate}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteHijriOverride(override.id)}
+                        data-testid={`button-delete-override-${override.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
