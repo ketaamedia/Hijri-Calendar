@@ -101,8 +101,20 @@ export async function initializeSettings(): Promise<Settings> {
     hijriEnabled: true,
     hijriReference: "khamenei",
     defaultView: "monthly",
+    numeralSystem: "arabic",
+    notificationsEnabled: true,
   };
   
   await saveSettings(defaultSettings);
   return defaultSettings;
+}
+
+export async function clearAllEvents(): Promise<void> {
+  const db = await getDB();
+  await db.clear("events");
+}
+
+export async function clearAllHijriOverrides(): Promise<void> {
+  const db = await getDB();
+  await db.clear("hijriOverrides");
 }

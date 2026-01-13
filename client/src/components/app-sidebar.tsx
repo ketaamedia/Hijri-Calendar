@@ -24,6 +24,7 @@ import {
   Plus,
   Settings,
   FileDown,
+  Database,
   Moon,
   Sun,
 } from "lucide-react";
@@ -130,11 +131,23 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                   <SidebarMenuButton
                     asChild
                     isActive={location === "/export"}
-                    tooltip="تصدير المناسبات"
+                    tooltip="تصدير PDF"
                   >
                     <Link href="/export" data-testid="link-export">
                       <FileDown className="h-4 w-4" />
-                      <span>تصدير المناسبات</span>
+                      <span>تصدير PDF</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/backup"}
+                    tooltip="النسخ الاحتياطي"
+                  >
+                    <Link href="/backup" data-testid="link-backup">
+                      <Database className="h-4 w-4" />
+                      <span>استيراد وتصدير</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

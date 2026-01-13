@@ -15,6 +15,7 @@ import {
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import type { Event } from "@shared/schema";
 import { formatGregorianDate, formatHijriDate, isSameDay } from "@/lib/hijri-utils";
+import { getEventColorClass } from "./ColorPicker";
 import { Pencil, Trash2, Calendar, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,7 +72,8 @@ export function EventList({ onEdit }: EventListProps) {
         <Card
           key={event.id}
           className={cn(
-            "border-r-4 border-r-primary transition-all",
+            "border-r-4 transition-all",
+            getEventColorClass(event.color || "primary").replace("bg-", "border-r-"),
             deletingId === event.id && "opacity-50"
           )}
           data-testid={`card-event-${event.id}`}

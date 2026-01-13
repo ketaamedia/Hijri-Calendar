@@ -22,10 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
-import type { Event, InsertEvent } from "@shared/schema";
-import { hijriMonthNames } from "@shared/schema";
+import type { Event, InsertEvent, EventColor } from "@shared/schema";
+import { hijriMonthNames, eventColorSchema } from "@shared/schema";
 import { gregorianToHijri, hijriToGregorian, getCurrentHijriYear, toArabicNumerals } from "@/lib/hijri-utils";
 import { useEffect } from "react";
+import { ColorPicker } from "./ColorPicker";
 
 const formSchema = z.object({
   title: z.string().min(1, "العنوان مطلوب"),
@@ -36,6 +37,7 @@ const formSchema = z.object({
   hijriMonth: z.number(),
   hijriDay: z.number(),
   isAnnual: z.boolean(),
+  color: eventColorSchema,
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,6 +66,7 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
           hijriMonth: event.hijriMonth,
           hijriDay: event.hijriDay,
           isAnnual: event.isAnnual,
+          color: event.color || "primary",
         }
       : {
           title: "",
@@ -74,6 +77,7 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
           hijriMonth: defaultHijri.month,
           hijriDay: defaultHijri.day,
           isAnnual: false,
+          color: "primary" as EventColor,
         },
   });
 
@@ -141,6 +145,23 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
                   className="resize-none"
                   {...field}
                   data-testid="input-event-description"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>اللون</FormLabel>
+              <FormControl>
+                <ColorPicker
+                  value={field.value}
+                  onChange={field.onChange}
                 />
               </FormControl>
               <FormMessage />

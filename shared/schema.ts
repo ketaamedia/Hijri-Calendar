@@ -6,6 +6,18 @@ export type CalendarType = z.infer<typeof calendarTypeSchema>;
 export const hijriReferenceSchema = z.enum(["khamenei", "manual"]);
 export type HijriReference = z.infer<typeof hijriReferenceSchema>;
 
+export const eventColorSchema = z.enum([
+  "primary",
+  "red",
+  "orange", 
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+]);
+export type EventColor = z.infer<typeof eventColorSchema>;
+
 export const eventSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "العنوان مطلوب"),
@@ -16,6 +28,8 @@ export const eventSchema = z.object({
   hijriMonth: z.number(),
   hijriDay: z.number(),
   isAnnual: z.boolean().default(false),
+  color: eventColorSchema.default("primary"),
+  notifyDaysBefore: z.number().optional(),
 });
 
 export type Event = z.infer<typeof eventSchema>;
@@ -43,6 +57,7 @@ export const settingsSchema = z.object({
   hijriReference: hijriReferenceSchema.default("khamenei"),
   defaultView: z.enum(["monthly", "weekly", "yearly"]).default("monthly"),
   numeralSystem: numeralSystemSchema.default("arabic"),
+  notificationsEnabled: z.boolean().default(true),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -87,6 +102,17 @@ export const weekDayNames = [
   "السبت",
 ] as const;
 
+export const eventColorNames: Record<EventColor, string> = {
+  primary: "أزرق داكن",
+  red: "أحمر",
+  orange: "برتقالي",
+  yellow: "أصفر",
+  green: "أخضر",
+  blue: "أزرق",
+  purple: "بنفسجي",
+  pink: "وردي",
+};
+
 export const pdfExportOptionsSchema = z.object({
   dateRange: z.object({
     start: z.string(),
@@ -96,6 +122,16 @@ export const pdfExportOptionsSchema = z.object({
 });
 
 export type PDFExportOptions = z.infer<typeof pdfExportOptionsSchema>;
+
+export const backupDataSchema = z.object({
+  version: z.string(),
+  exportDate: z.string(),
+  events: z.array(eventSchema),
+  hijriOverrides: z.array(hijriMonthOverrideSchema),
+  settings: settingsSchema,
+});
+
+export type BackupData = z.infer<typeof backupDataSchema>;
 
 export const users = {} as any;
 export const insertUserSchema = z.object({

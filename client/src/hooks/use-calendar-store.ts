@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Event, HijriMonthOverride, Settings } from "@shared/schema";
+import type { Event, HijriMonthOverride, Settings, BackupData } from "@shared/schema";
 import * as db from "@/lib/db";
 
 interface CalendarState {
@@ -20,11 +20,15 @@ interface CalendarState {
   addEvent: (event: Event) => Promise<void>;
   updateEvent: (event: Event) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
+  importEvents: (events: Partial<Event>[]) => Promise<number>;
   
   addHijriOverride: (override: HijriMonthOverride) => Promise<void>;
   deleteHijriOverride: (id: string) => Promise<void>;
   
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
+  
+  restoreBackup: (data: BackupData) => Promise<void>;
+  clearAllData: () => Promise<void>;
 }
 
 export const useCalendarStore = create<CalendarState>((set, get) => ({
@@ -35,6 +39,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     hijriReference: "khamenei",
     defaultView: "monthly",
     numeralSystem: "arabic",
+    notificationsEnabled: true,
   },
   currentDate: new Date(),
   selectedDate: null,
@@ -85,6 +90,38 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     }));
   },
 
+  importEvents: async (partialEvents) => {
+    const { hijriOverrides } = get();
+    let importedCount = 0;
+
+    for (const partial of partialEvents) {
+      if (!partial.title || !partial.gregorianDate) continue;
+
+      const date = new Date(partial.gregorianDate);
+      const { gregorianToHijri } = await import("@/lib/hijri-utils");
+      const hijri = gregorianToHijri(date, hijriOverrides);
+
+      const event: Event = {
+        id: crypto.randomUUID(),
+        title: partial.title,
+        description: partial.description || "",
+        dateType: partial.dateType || "gregorian",
+        gregorianDate: partial.gregorianDate,
+        hijriYear: hijri.year,
+        hijriMonth: hijri.month,
+        hijriDay: hijri.day,
+        isAnnual: partial.isAnnual || false,
+        color: partial.color || "primary",
+      };
+
+      await db.addEvent(event);
+      set((state) => ({ events: [...state.events, event] }));
+      importedCount++;
+    }
+
+    return importedCount;
+  },
+
   addHijriOverride: async (override) => {
     await db.addHijriOverride(override);
     set((state) => ({ hijriOverrides: [...state.hijriOverrides, override] }));
@@ -102,5 +139,34 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     const updated = { ...settings, ...newSettings };
     await db.saveSettings(updated);
     set({ settings: updated });
+  },
+
+  restoreBackup: async (data) => {
+    await db.clearAllEvents();
+    await db.clearAllHijriOverrides();
+    
+    for (const event of data.events) {
+      await db.addEvent(event);
+    }
+    
+    for (const override of data.hijriOverrides) {
+      await db.addHijriOverride(override);
+    }
+    
+    if (data.settings) {
+      await db.saveSettings(data.settings);
+    }
+    
+    set({
+      events: data.events,
+      hijriOverrides: data.hijriOverrides,
+      settings: data.settings || get().settings,
+    });
+  },
+
+  clearAllData: async () => {
+    await db.clearAllEvents();
+    await db.clearAllHijriOverrides();
+    set({ events: [], hijriOverrides: [] });
   },
 }));
