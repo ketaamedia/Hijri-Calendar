@@ -13,6 +13,11 @@ import ExportPage from "@/pages/export";
 import BackupPage from "@/pages/backup";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
+import {
+  sendEventNotifications,
+  shouldCheckNotifications,
+  markNotificationsChecked,
+} from "@/lib/notifications";
 
 function Router() {
   return (
@@ -27,7 +32,7 @@ function Router() {
 }
 
 function AppContent() {
-  const { loadData, isLoading } = useCalendarStore();
+  const { loadData, isLoading, events, settings, hijriOverrides } = useCalendarStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark";
@@ -38,6 +43,13 @@ function AppContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!isLoading && events.length > 0 && shouldCheckNotifications()) {
+      sendEventNotifications(events, settings, hijriOverrides);
+      markNotificationsChecked();
+    }
+  }, [isLoading, events, settings, hijriOverrides]);
 
   useEffect(() => {
     if (isDark) {

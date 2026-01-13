@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,11 @@ import { Separator } from "@/components/ui/separator";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { hijriMonthNames } from "@shared/schema";
 import { getCurrentHijriYear, toArabicNumerals } from "@/lib/hijri-utils";
-import { Plus, Trash2, Settings } from "lucide-react";
+import { Plus, Trash2, Settings, Bell, BellOff } from "lucide-react";
+import {
+  requestNotificationPermission,
+  getNotificationPermissionStatus,
+} from "@/lib/notifications";
 
 export function SettingsPanel() {
   const {
@@ -31,6 +35,20 @@ export function SettingsPanel() {
     hijriMonth: 1,
     gregorianStartDate: new Date().toISOString().split("T")[0],
   });
+
+  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    setNotificationStatus(getNotificationPermissionStatus());
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotificationStatus(getNotificationPermissionStatus());
+    if (granted) {
+      updateSettings({ notificationsEnabled: true });
+    }
+  };
 
   const handleAddOverride = async () => {
     const id = crypto.randomUUID();
@@ -151,6 +169,61 @@ export function SettingsPanel() {
               اختر نظام الأرقام المفضل لديك لعرض التواريخ
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-notifications-settings">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            إعدادات التنبيهات
+          </CardTitle>
+          <CardDescription>
+            تلقي تنبيهات بالمناسبات القادمة
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-row-reverse items-center justify-between">
+            <div className="space-y-0.5 text-right">
+              <Label htmlFor="notifications-enabled">تفعيل التنبيهات</Label>
+              <p className="text-sm text-muted-foreground">
+                تلقي إشعارات بالمناسبات القادمة
+              </p>
+            </div>
+            {notificationStatus === "unsupported" ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <BellOff className="h-4 w-4" />
+                <span className="text-sm">غير مدعوم</span>
+              </div>
+            ) : notificationStatus === "granted" ? (
+              <Switch
+                id="notifications-enabled"
+                checked={settings.notificationsEnabled}
+                onCheckedChange={(checked) =>
+                  updateSettings({ notificationsEnabled: checked })
+                }
+                data-testid="switch-notifications-enabled"
+              />
+            ) : notificationStatus === "denied" ? (
+              <div className="flex items-center gap-2 text-destructive">
+                <BellOff className="h-4 w-4" />
+                <span className="text-sm">محظور</span>
+              </div>
+            ) : (
+              <Button
+                onClick={handleEnableNotifications}
+                size="sm"
+                data-testid="button-enable-notifications"
+              >
+                السماح
+              </Button>
+            )}
+          </div>
+          {notificationStatus === "denied" && (
+            <p className="text-xs text-muted-foreground text-right">
+              تم حظر التنبيهات. يرجى تفعيلها من إعدادات المتصفح.
+            </p>
+          )}
         </CardContent>
       </Card>
 
