@@ -146,12 +146,13 @@ export function isToday(date: Date): boolean {
 }
 
 export function toArabicNumerals(num: number | string, system: "arabic" | "hindi" = "arabic"): string {
-  const arabicNumerals = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
-  const hindiNumerals = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-  const numerals = system === "arabic" ? arabicNumerals : hindiNumerals;
+  if (system === "arabic") {
+    return String(num);
+  }
+  const hindiNumerals = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
   return String(num)
     .split("")
-    .map((d) => (/\d/.test(d) ? numerals[parseInt(d)] : d))
+    .map((d) => (/\d/.test(d) ? hindiNumerals[parseInt(d)] : d))
     .join("");
 }
 

@@ -158,10 +158,10 @@ export function SettingsPanel() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="arabic" data-testid="option-numeral-arabic">
-                  الأرقام العربية (٠١٢٣٤٥٦٧٨٩)
+                  الأرقام العربية (0123456789)
                 </SelectItem>
                 <SelectItem value="hindi" data-testid="option-numeral-hindi">
-                  الأرقام الهندية (0123456789)
+                  الأرقام الهندية (٠١٢٣٤٥٦٧٨٩)
                 </SelectItem>
               </SelectContent>
             </Select>
