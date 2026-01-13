@@ -177,21 +177,22 @@ export default function ExportPage() {
 
   return (
     <div className="flex flex-col h-full bg-background" data-testid="export-page">
-      <header className="flex items-center justify-between p-4 border-b bg-card/50">
-        <Button variant="ghost" asChild data-testid="button-back-home">
+      <header className="flex items-center justify-between p-3 md:p-4 border-b bg-card/50">
+        <Button variant="ghost" size="sm" asChild data-testid="button-back-home">
           <Link href="/" className="flex items-center gap-2">
             <ArrowRight className="h-4 w-4" />
-            العودة للتقويم
+            <span className="hidden sm:inline">العودة للتقويم</span>
           </Link>
         </Button>
-        <h1 className="text-xl font-bold flex items-center gap-2" data-testid="text-page-title">
-          <FileDown className="h-5 w-5" />
-          تصدير المناسبات
+        <h1 className="text-base md:text-xl font-bold flex items-center gap-2" data-testid="text-page-title">
+          <FileDown className="h-4 w-4 md:h-5 md:w-5" />
+          <span className="hidden sm:inline">تصدير المناسبات</span>
+          <span className="sm:hidden">تصدير</span>
         </h1>
       </header>
 
-      <div className="flex-1 overflow-hidden p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+      <div className="flex-1 overflow-auto p-2 md:p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 lg:h-full">
           <Card className="lg:col-span-2 flex flex-col overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex flex-row-reverse items-center justify-between gap-4 flex-wrap">
@@ -218,31 +219,26 @@ export default function ExportPage() {
               </div>
             </CardHeader>
 
-            <div className="px-6 pb-3 flex flex-wrap items-center gap-3 border-b">
+            <div className="px-3 md:px-6 pb-3 flex flex-wrap items-center gap-2 md:gap-3 border-b">
               <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
                 <Select value={filterType} onValueChange={(v: FilterType) => setFilterType(v)}>
-                  <SelectTrigger className="w-32" data-testid="select-filter-type">
+                  <SelectTrigger className="w-24 md:w-32" data-testid="select-filter-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">الكل</SelectItem>
-                    <SelectItem value="annual">سنوية فقط</SelectItem>
+                    <SelectItem value="annual">سنوية</SelectItem>
                     <SelectItem value="oneTime">مرة واحدة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Separator orientation="vertical" className="h-6" />
+              <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
-              <div className="flex items-center gap-2">
-                {sortOrder === "asc" ? (
-                  <SortAsc className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <SortDesc className="h-4 w-4 text-muted-foreground" />
-                )}
+              <div className="flex items-center gap-1 md:gap-2">
                 <Select value={sortField} onValueChange={(v: SortField) => setSortField(v)}>
-                  <SelectTrigger className="w-28" data-testid="select-sort-field">
+                  <SelectTrigger className="w-20 md:w-28" data-testid="select-sort-field">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -260,20 +256,21 @@ export default function ExportPage() {
                 </Button>
               </div>
 
-              <Separator orientation="vertical" className="h-6" />
+              <Separator orientation="vertical" className="h-6 hidden md:block" />
 
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={selectAll} data-testid="button-select-all">
-                  <CheckSquare className="h-4 w-4 ml-1" />
-                  تحديد الكل
+              <div className="flex items-center gap-1 md:gap-2">
+                <Button variant="outline" size="sm" onClick={selectAll} className="text-xs md:text-sm" data-testid="button-select-all">
+                  <CheckSquare className="h-3 w-3 md:h-4 md:w-4 ml-1" />
+                  <span className="hidden md:inline">تحديد الكل</span>
+                  <span className="md:hidden">الكل</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={deselectAll} data-testid="button-deselect-all">
-                  <Square className="h-4 w-4 ml-1" />
-                  إلغاء التحديد
+                <Button variant="outline" size="sm" onClick={deselectAll} className="text-xs md:text-sm" data-testid="button-deselect-all">
+                  <Square className="h-3 w-3 md:h-4 md:w-4 ml-1" />
+                  <span className="hidden md:inline">إلغاء</span>
                 </Button>
-                <Button variant="ghost" size="sm" onClick={resetFilters} data-testid="button-reset-filters">
+                <Button variant="ghost" size="sm" onClick={resetFilters} className="hidden sm:flex" data-testid="button-reset-filters">
                   <RefreshCw className="h-4 w-4 ml-1" />
-                  إعادة ضبط
+                  ضبط
                 </Button>
               </div>
             </div>
@@ -295,7 +292,7 @@ export default function ExportPage() {
                       return (
                         <div
                           key={event.id}
-                          className={`flex items-start gap-4 p-4 hover-elevate cursor-pointer transition-colors ${
+                          className={`flex items-start gap-2 md:gap-4 p-3 md:p-4 hover-elevate cursor-pointer transition-colors ${
                             isSelected ? "bg-primary/5" : ""
                           }`}
                           onClick={() => toggleEventSelection(event.id)}
@@ -308,22 +305,25 @@ export default function ExportPage() {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-medium text-foreground" data-testid={`text-event-title-${event.id}`}>
+                              <h3 className="font-medium text-foreground text-sm md:text-base" data-testid={`text-event-title-${event.id}`}>
                                 {event.title}
                               </h3>
                               {event.isAnnual && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-[10px] md:text-xs">
                                   سنوي
                                 </Badge>
                               )}
                             </div>
                             {event.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-1 md:line-clamp-2">
                                 {event.description}
                               </p>
                             )}
+                            <div className="md:hidden text-xs text-muted-foreground mt-1">
+                              {gregStr}
+                            </div>
                           </div>
-                          <div className="text-left text-sm space-y-1 shrink-0">
+                          <div className="hidden md:block text-left text-sm space-y-1 shrink-0">
                             <div className="text-foreground">{gregStr}</div>
                             {settings.hijriEnabled && (
                               <div className="text-muted-foreground text-xs">{hijriStr}</div>

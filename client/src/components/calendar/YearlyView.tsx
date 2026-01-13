@@ -1,13 +1,12 @@
 import { useCalendarStore } from "@/hooks/use-calendar-store";
-import { getCalendarDays, isToday, toArabicNumerals, gregorianToHijri } from "@/lib/hijri-utils";
-import { gregorianMonthNames, hijriMonthNames } from "@shared/schema";
-import type { HijriMonthOverride } from "@shared/schema";
+import { gregorianToHijri, getCalendarDays, toArabicNumerals, isToday } from "@/lib/hijri-utils";
+import { gregorianMonthNames, hijriMonthNames, type HijriMonthOverride } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 export function YearlyView() {
   const { currentDate, setCurrentDate, setView, events, settings, hijriOverrides } = useCalendarStore();
-  const year = currentDate.getFullYear();
 
+  const year = currentDate.getFullYear();
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const getEventsForMonth = (month: number) => {
@@ -16,7 +15,9 @@ export function YearlyView() {
       if (event.isAnnual) {
         return eventDate.getMonth() === month - 1;
       }
-      return eventDate.getFullYear() === year && eventDate.getMonth() === month - 1;
+      return (
+        eventDate.getFullYear() === year && eventDate.getMonth() === month - 1
+      );
     });
   };
 
@@ -27,8 +28,8 @@ export function YearlyView() {
   };
 
   return (
-    <div className="flex-1 p-6" data-testid="yearly-view">
-      <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+    <div className="flex-1 p-2 sm:p-4 md:p-6" data-testid="yearly-view">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         {months.map((month) => {
           const firstDayOfMonth = new Date(year, month - 1, 1);
           const hijri = gregorianToHijri(firstDayOfMonth, hijriOverrides);
@@ -42,16 +43,16 @@ export function YearlyView() {
               key={month}
               onClick={() => handleMonthClick(month)}
               className={cn(
-                "p-4 rounded-lg border transition-all hover-elevate",
+                "p-3 sm:p-4 rounded-lg border transition-all hover-elevate",
                 "bg-card border-border text-right",
                 isCurrentMonth && "ring-2 ring-primary border-primary bg-primary/5"
               )}
               data-testid={`button-month-${month}`}
             >
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-2 sm:mb-3">
                 <span
                   className={cn(
-                    "inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-full text-xs font-medium",
+                    "inline-flex items-center justify-center h-5 sm:h-6 min-w-5 sm:min-w-6 px-1 sm:px-1.5 rounded-full text-[10px] sm:text-xs font-medium",
                     monthEvents.length > 0
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
@@ -63,7 +64,7 @@ export function YearlyView() {
                 <div className="text-left">
                   <h3
                     className={cn(
-                      "text-lg font-semibold",
+                      "text-sm sm:text-base md:text-lg font-semibold",
                       isCurrentMonth ? "text-primary" : "text-foreground"
                     )}
                     data-testid={`text-month-name-${month}`}
@@ -71,29 +72,31 @@ export function YearlyView() {
                     {gregorianMonthNames[month - 1]}
                   </h3>
                   {settings.hijriEnabled && (
-                    <p className="text-xs text-muted-foreground" data-testid={`text-month-hijri-${month}`}>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground" data-testid={`text-month-hijri-${month}`}>
                       {hijriMonthNames[hijri.month - 1]}
                     </p>
                   )}
                 </div>
               </div>
 
-              <MiniCalendar year={year} month={month} overrides={hijriOverrides} />
+              <div className="hidden sm:block">
+                <MiniCalendar year={year} month={month} overrides={hijriOverrides} />
+              </div>
 
               {monthEvents.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="space-y-1">
+                <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border">
+                  <div className="space-y-0.5 sm:space-y-1">
                     {monthEvents.slice(0, 2).map((event) => (
                       <div
                         key={event.id}
-                        className="text-xs text-muted-foreground truncate"
+                        className="text-[10px] sm:text-xs text-muted-foreground truncate"
                         data-testid={`text-event-preview-${event.id}`}
                       >
                         {event.title}
                       </div>
                     ))}
                     {monthEvents.length > 2 && (
-                      <div className="text-xs text-primary" data-testid={`text-more-events-${month}`}>
+                      <div className="text-[10px] sm:text-xs text-primary" data-testid={`text-more-events-${month}`}>
                         +{toArabicNumerals(monthEvents.length - 2, settings.numeralSystem)} مناسبات أخرى
                       </div>
                     )}
