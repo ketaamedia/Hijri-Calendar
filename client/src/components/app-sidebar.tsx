@@ -83,14 +83,14 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
             <SidebarGroupContent className="px-4 py-3 group-data-[collapsible=icon]:hidden">
               <div className="text-center p-4 rounded-lg bg-primary/5 border border-primary/20" data-testid="sidebar-date-display">
                 <div className="text-2xl font-bold text-primary mb-1" data-testid="text-sidebar-day">
-                  {toArabicNumerals(currentDate.getDate())}
+                  {toArabicNumerals(currentDate.getDate(), settings.numeralSystem)}
                 </div>
                 <div className="text-sm text-foreground" data-testid="text-sidebar-gregorian">
-                  {gregorianMonthNames[currentDate.getMonth()]} {toArabicNumerals(currentDate.getFullYear())}
+                  {gregorianMonthNames[currentDate.getMonth()]} {toArabicNumerals(currentDate.getFullYear(), settings.numeralSystem)}
                 </div>
                 {settings.hijriEnabled && (
                   <div className="text-xs text-muted-foreground mt-1" data-testid="text-sidebar-hijri">
-                    {toArabicNumerals(hijri.day)} {hijriMonthNames[hijri.month - 1]} {toArabicNumerals(hijri.year)}
+                    {toArabicNumerals(hijri.day, settings.numeralSystem)} {hijriMonthNames[hijri.month - 1]} {toArabicNumerals(hijri.year, settings.numeralSystem)}
                   </div>
                 )}
               </div>

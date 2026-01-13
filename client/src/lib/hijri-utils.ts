@@ -145,11 +145,13 @@ export function isToday(date: Date): boolean {
   return isSameDay(date, new Date());
 }
 
-export function toArabicNumerals(num: number | string): string {
+export function toArabicNumerals(num: number | string, system: "arabic" | "hindi" = "arabic"): string {
   const arabicNumerals = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  const hindiNumerals = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  const numerals = system === "arabic" ? arabicNumerals : hindiNumerals;
   return String(num)
     .split("")
-    .map((d) => (/\d/.test(d) ? arabicNumerals[parseInt(d)] : d))
+    .map((d) => (/\d/.test(d) ? numerals[parseInt(d)] : d))
     .join("");
 }
 

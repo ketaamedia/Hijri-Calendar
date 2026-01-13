@@ -58,7 +58,7 @@ export function YearlyView() {
                   )}
                   data-testid={`badge-events-count-${month}`}
                 >
-                  {toArabicNumerals(monthEvents.length)}
+                  {toArabicNumerals(monthEvents.length, settings.numeralSystem)}
                 </span>
                 <div className="text-left">
                   <h3
@@ -94,7 +94,7 @@ export function YearlyView() {
                     ))}
                     {monthEvents.length > 2 && (
                       <div className="text-xs text-primary" data-testid={`text-more-events-${month}`}>
-                        +{toArabicNumerals(monthEvents.length - 2)} مناسبات أخرى
+                        +{toArabicNumerals(monthEvents.length - 2, settings.numeralSystem)} مناسبات أخرى
                       </div>
                     )}
                   </div>

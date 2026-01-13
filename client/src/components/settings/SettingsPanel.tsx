@@ -124,6 +124,33 @@ export function SettingsPanel() {
                 : "يمكنك تحديد بداية كل شهر هجري يدوياً"}
             </p>
           </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>نظام الأرقام</Label>
+            <Select
+              value={settings.numeralSystem}
+              onValueChange={(value: "arabic" | "hindi") =>
+                updateSettings({ numeralSystem: value })
+              }
+            >
+              <SelectTrigger data-testid="select-numeral-system">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="arabic" data-testid="option-numeral-arabic">
+                  الأرقام العربية (٠١٢٣٤٥٦٧٨٩)
+                </SelectItem>
+                <SelectItem value="hindi" data-testid="option-numeral-hindi">
+                  الأرقام الهندية (0123456789)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground text-right">
+              اختر نظام الأرقام المفضل لديك لعرض التواريخ
+            </p>
+          </div>
         </CardContent>
       </Card>
 

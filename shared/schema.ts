@@ -35,10 +35,14 @@ export type HijriMonthOverride = z.infer<typeof hijriMonthOverrideSchema>;
 export const insertHijriMonthOverrideSchema = hijriMonthOverrideSchema.omit({ id: true });
 export type InsertHijriMonthOverride = z.infer<typeof insertHijriMonthOverrideSchema>;
 
+export const numeralSystemSchema = z.enum(["arabic", "hindi"]);
+export type NumeralSystem = z.infer<typeof numeralSystemSchema>;
+
 export const settingsSchema = z.object({
   hijriEnabled: z.boolean().default(true),
   hijriReference: hijriReferenceSchema.default("khamenei"),
   defaultView: z.enum(["monthly", "weekly", "yearly"]).default("monthly"),
+  numeralSystem: numeralSystemSchema.default("arabic"),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

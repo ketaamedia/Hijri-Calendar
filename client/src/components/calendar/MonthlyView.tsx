@@ -69,14 +69,14 @@ export function MonthlyView() {
                   )}
                   data-testid={`text-day-gregorian-${dateKey}`}
                 >
-                  {toArabicNumerals(day.gregorian.getDate())}
+                  {toArabicNumerals(day.gregorian.getDate(), settings.numeralSystem)}
                 </span>
                 {settings.hijriEnabled && (
                   <span 
                     className="text-xs text-muted-foreground"
                     data-testid={`text-day-hijri-${dateKey}`}
                   >
-                    {toArabicNumerals(day.hijri.day)}
+                    {toArabicNumerals(day.hijri.day, settings.numeralSystem)}
                   </span>
                 )}
               </div>
@@ -98,7 +98,7 @@ export function MonthlyView() {
                   ))}
                   {dayEvents.length > 3 && (
                     <span className="text-xs text-muted-foreground" data-testid={`events-more-${dateKey}`}>
-                      +{toArabicNumerals(dayEvents.length - 3)}
+                      +{toArabicNumerals(dayEvents.length - 3, settings.numeralSystem)}
                     </span>
                   )}
                 </div>

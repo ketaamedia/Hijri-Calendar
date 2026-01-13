@@ -34,6 +34,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     hijriEnabled: true,
     hijriReference: "khamenei",
     defaultView: "monthly",
+    numeralSystem: "arabic",
   },
   currentDate: new Date(),
   selectedDate: null,

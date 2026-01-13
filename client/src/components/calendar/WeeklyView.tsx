@@ -73,11 +73,11 @@ export function WeeklyView() {
                   )}
                   data-testid={`text-weekday-gregorian-${dateKey}`}
                 >
-                  {toArabicNumerals(date.getDate())}
+                  {toArabicNumerals(date.getDate(), settings.numeralSystem)}
                 </div>
                 {settings.hijriEnabled && (
                   <div className="text-xs text-muted-foreground mt-1" data-testid={`text-weekday-hijri-${dateKey}`}>
-                    {toArabicNumerals(hijri.day)}
+                    {toArabicNumerals(hijri.day, settings.numeralSystem)}
                   </div>
                 )}
               </button>

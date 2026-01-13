@@ -140,8 +140,8 @@ export default function ExportPage() {
     const date = new Date(event.gregorianDate);
     const hijri = gregorianToHijri(date, hijriOverrides);
     
-    const gregStr = `${toArabicNumerals(date.getDate())} ${gregorianMonthNames[date.getMonth()]} ${toArabicNumerals(date.getFullYear())}`;
-    const hijriStr = `${toArabicNumerals(hijri.day)} ${hijriMonthNames[hijri.month - 1]} ${toArabicNumerals(hijri.year)}`;
+    const gregStr = `${toArabicNumerals(date.getDate(), settings.numeralSystem)} ${gregorianMonthNames[date.getMonth()]} ${toArabicNumerals(date.getFullYear(), settings.numeralSystem)}`;
+    const hijriStr = `${toArabicNumerals(hijri.day, settings.numeralSystem)} ${hijriMonthNames[hijri.month - 1]} ${toArabicNumerals(hijri.year, settings.numeralSystem)}`;
     
     return { gregStr, hijriStr };
   };
