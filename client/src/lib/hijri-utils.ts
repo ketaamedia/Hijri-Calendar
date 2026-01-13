@@ -45,16 +45,45 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
 
 export function hijriToGregorian(hijri: HijriDate, overrides?: HijriMonthOverride[]): Date {
   if (overrides && overrides.length > 0) {
-    const override = overrides.find(
+    const directOverride = overrides.find(
       (o) => o.hijriYear === hijri.year && o.hijriMonth === hijri.month
     );
-    if (override) {
-      const startDate = new Date(override.gregorianStartDate);
+    if (directOverride) {
+      const startDate = new Date(directOverride.gregorianStartDate);
       startDate.setDate(startDate.getDate() + hijri.day - 1);
       return startDate;
     }
+
+    const sortedOverrides = [...overrides].sort((a, b) => {
+      if (a.hijriYear !== b.hijriYear) return b.hijriYear - a.hijriYear;
+      return b.hijriMonth - a.hijriMonth;
+    });
+
+    const precedingOverride = sortedOverrides.find(
+      (o) =>
+        o.hijriYear < hijri.year ||
+        (o.hijriYear === hijri.year && o.hijriMonth < hijri.month)
+    );
+
+    if (precedingOverride) {
+      const overrideStartDate = new Date(precedingOverride.gregorianStartDate);
+      const baseHijriStart = moment(
+        `${precedingOverride.hijriYear}/${precedingOverride.hijriMonth}/1`,
+        "iYYYY/iM/iD"
+      );
+      const baseGregorianStart = baseHijriStart.toDate();
+
+      const offsetDays = Math.round(
+        (overrideStartDate.getTime() - baseGregorianStart.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      const targetMoment = moment(`${hijri.year}/${hijri.month}/${hijri.day}`, "iYYYY/iM/iD");
+      const result = new Date(targetMoment.toDate());
+      result.setDate(result.getDate() + offsetDays);
+      return result;
+    }
   }
-  
+
   const m = moment(`${hijri.year}/${hijri.month}/${hijri.day}`, "iYYYY/iM/iD");
   return m.toDate();
 }
