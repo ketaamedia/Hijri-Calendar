@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatGregorianDate, formatHijriDate, gregorianToHijri, toArabicNumerals } from "@/lib/hijri-utils";
-import { getEventColorClass } from "./ColorPicker";
+import { getEventBgClass } from "./ColorPicker";
 import { Clock, CalendarDays } from "lucide-react";
 import type { Event } from "@shared/schema";
 
@@ -48,7 +48,7 @@ export function UpcomingEvents() {
       .filter((item) => item.daysUntil >= 0 && item.daysUntil <= 30)
       .sort((a, b) => a.daysUntil - b.daysUntil)
       .slice(0, 5);
-  }, [events]);
+  }, [events, hijriOverrides]);
 
   if (upcomingEvents.length === 0) {
     return null;
@@ -75,7 +75,7 @@ export function UpcomingEvents() {
               <div
                 className={cn(
                   "w-3 h-3 rounded-full mt-1.5 shrink-0",
-                  getEventColorClass(event.color || "primary")
+                  getEventBgClass(event.color || "primary")
                 )}
               />
               <div className="flex-1 min-w-0">

@@ -44,12 +44,15 @@ function AppContent() {
     loadData();
   }, [loadData]);
 
+  const [hasCheckedNotificationsToday, setHasCheckedNotificationsToday] = useState(false);
+
   useEffect(() => {
-    if (!isLoading && events.length > 0 && shouldCheckNotifications()) {
+    if (!isLoading && events.length > 0 && !hasCheckedNotificationsToday && shouldCheckNotifications()) {
       sendEventNotifications(events, settings, hijriOverrides);
       markNotificationsChecked();
+      setHasCheckedNotificationsToday(true);
     }
-  }, [isLoading, events, settings, hijriOverrides]);
+  }, [isLoading, events.length, hasCheckedNotificationsToday]);
 
   useEffect(() => {
     if (isDark) {
