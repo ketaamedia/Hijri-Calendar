@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
+import { useAuth } from "@/hooks/use-auth";
 import type { Event } from "@shared/schema";
 import { formatGregorianDate, formatHijriDate, isSameDay } from "@/lib/hijri-utils";
 import { getEventBorderClass } from "./ColorPicker";
@@ -25,7 +26,11 @@ interface EventListProps {
 
 export function EventList({ onEdit }: EventListProps) {
   const { events, selectedDate, deleteEvent, settings } = useCalendarStore();
+  const { user } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const canEdit = user?.role === "admin" || user?.canEditEvents;
+  const canDelete = user?.role === "admin" || user?.canDeleteEvents;
 
   const filteredEvents = selectedDate
     ? events.filter((event) => {
@@ -59,8 +64,8 @@ export function EventList({ onEdit }: EventListProps) {
         </h3>
         <p className="text-sm text-muted-foreground max-w-sm" data-testid="text-empty-description">
           {selectedDate
-            ? "لا توجد مناسبات في هذا اليوم. يمكنك إضافة مناسبة جديدة."
-            : "لم تتم إضافة أي مناسبات بعد. ابدأ بإضافة مناسبتك الأولى."}
+            ? "لا توجد مناسبات في هذا اليوم."
+            : "لم تتم إضافة أي مناسبات بعد."}
         </p>
       </div>
     );
@@ -101,45 +106,51 @@ export function EventList({ onEdit }: EventListProps) {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onEdit(event)}
-                data-testid={`button-edit-event-${event.id}`}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+            {(canEdit || canDelete) && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {canEdit && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    data-testid={`button-delete-event-${event.id}`}
+                    onClick={() => onEdit(event)}
+                    data-testid={`button-edit-event-${event.id}`}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Pencil className="h-4 w-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent data-testid="dialog-confirm-delete">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>حذف المناسبة</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      هل أنت متأكد من حذف "{event.title}"؟ لا يمكن التراجع عن هذا الإجراء.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="flex flex-row-reverse gap-2">
-                    <AlertDialogCancel data-testid="button-cancel-delete">إلغاء</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDelete(event.id)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      data-testid="button-confirm-delete"
-                    >
-                      حذف
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+                )}
+                {canDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        data-testid={`button-delete-event-${event.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent data-testid="dialog-confirm-delete">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>حذف المناسبة</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          هل أنت متأكد من حذف "{event.title}"؟ لا يمكن التراجع عن هذا الإجراء.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex flex-row-reverse gap-2">
+                        <AlertDialogCancel data-testid="button-cancel-delete">إلغاء</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(event.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          data-testid="button-confirm-delete"
+                        >
+                          حذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            )}
           </CardHeader>
           {(event.description || event.isAnnual) && (
             <CardContent className="pt-0 text-right">
