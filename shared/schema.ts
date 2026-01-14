@@ -167,6 +167,7 @@ export const numeralSystemEnum = pgEnum("numeral_system", ["arabic", "hindi"]);
 export const fileRoleEnum = pgEnum("file_role", ["manager", "deputy", "member"]);
 export const recurrenceTypeEnum = pgEnum("recurrence_type", ["none", "daily", "weekly", "monthly", "yearly"]);
 export const taskStatusEnum = pgEnum("task_status", ["pending", "in_progress", "completed", "cancelled"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["event_reminder", "task_assigned", "task_updated", "file_invitation", "general"]);
 
 // ==================== Drizzle Tables ====================
 
@@ -268,6 +269,17 @@ export const attachments = pgTable("attachments", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: notificationTypeEnum("type").notNull().default("general"),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -314,6 +326,11 @@ export const insertAttachmentSchema = createInsertSchema(attachments).omit({
   createdAt: true 
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -339,6 +356,11 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 export type AttachmentDb = typeof attachments.$inferSelect;
 export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
+
+export type NotificationDb = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type NotificationType = "event_reminder" | "task_assigned" | "task_updated" | "file_invitation" | "general";
 
 export type FileRole = "manager" | "deputy" | "member";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";

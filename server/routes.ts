@@ -667,5 +667,67 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== Notification Routes ====================
+
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const userNotifications = await storage.getNotificationsByUserId(user.id);
+      res.json(userNotifications);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const count = await storage.getUnreadNotificationCount(user.id);
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch unread count" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id, 10);
+      const notification = await storage.markNotificationAsRead(notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      await storage.markAllNotificationsAsRead(user.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", requireAuth, async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id, 10);
+      const deleted = await storage.deleteNotification(notificationId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
   return httpServer;
 }

@@ -4,7 +4,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
@@ -160,7 +161,13 @@ function AppContent() {
       <div className="flex h-screen w-full">
         <AppSidebar isDark={isDark} toggleTheme={toggleTheme} />
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-          <Router />
+          <header className="flex items-center justify-between gap-2 p-2 border-b bg-background sticky top-0 z-10" dir="rtl">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <NotificationBell />
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Router />
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>
