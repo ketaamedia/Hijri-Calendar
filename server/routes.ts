@@ -796,5 +796,160 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== Analytics Routes ====================
+
+  app.get("/api/analytics/summary", requireAuth, async (req, res) => {
+    try {
+      const allEvents = await storage.getAllEvents();
+      const allUsers = await storage.getAllUsers();
+      const allFiles = await storage.getAllFiles();
+      
+      // Get all tasks by fetching events and their tasks
+      let allTasks: any[] = [];
+      for (const event of allEvents) {
+        const eventTasks = await storage.getTasksByEventId(event.id);
+        allTasks = allTasks.concat(eventTasks);
+      }
+      
+      const completedTasks = allTasks.filter(t => t.status === "completed");
+      const pendingTasks = allTasks.filter(t => t.status === "pending");
+      
+      // Events this month and last month
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      
+      const eventsThisMonth = allEvents.filter(e => {
+        const eventDate = new Date(e.gregorianDate);
+        return eventDate >= thisMonthStart && eventDate <= now;
+      });
+      
+      const eventsLastMonth = allEvents.filter(e => {
+        const eventDate = new Date(e.gregorianDate);
+        return eventDate >= lastMonthStart && eventDate <= lastMonthEnd;
+      });
+      
+      const taskCompletionRate = allTasks.length > 0 
+        ? Math.round((completedTasks.length / allTasks.length) * 100) 
+        : 0;
+      
+      res.json({
+        totalEvents: allEvents.length,
+        totalTasks: allTasks.length,
+        completedTasks: completedTasks.length,
+        pendingTasks: pendingTasks.length,
+        totalFiles: allFiles.length,
+        totalUsers: allUsers.length,
+        eventsThisMonth: eventsThisMonth.length,
+        eventsLastMonth: eventsLastMonth.length,
+        taskCompletionRate,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics summary" });
+    }
+  });
+
+  app.get("/api/analytics/events-by-month", requireAuth, async (req, res) => {
+    try {
+      const allEvents = await storage.getAllEvents();
+      const now = new Date();
+      const months: { month: string; count: number }[] = [];
+      
+      const arabicMonths = [
+        "كانون الثاني", "شباط", "آذار", "نيسان", "أيار", "حزيران",
+        "تموز", "آب", "أيلول", "تشرين الأول", "تشرين الثاني", "كانون الأول"
+      ];
+      
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        
+        const count = allEvents.filter(e => {
+          const eventDate = new Date(e.gregorianDate);
+          return eventDate >= monthDate && eventDate <= monthEnd;
+        }).length;
+        
+        months.push({
+          month: arabicMonths[monthDate.getMonth()],
+          count,
+        });
+      }
+      
+      res.json(months);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch events by month" });
+    }
+  });
+
+  app.get("/api/analytics/tasks-by-status", requireAuth, async (req, res) => {
+    try {
+      const allEvents = await storage.getAllEvents();
+      
+      let allTasks: any[] = [];
+      for (const event of allEvents) {
+        const eventTasks = await storage.getTasksByEventId(event.id);
+        allTasks = allTasks.concat(eventTasks);
+      }
+      
+      const statusLabels: Record<string, string> = {
+        pending: "قيد الانتظار",
+        in_progress: "قيد التنفيذ",
+        completed: "مكتملة",
+        cancelled: "ملغاة",
+      };
+      
+      const statusCounts: Record<string, number> = {
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+      };
+      
+      allTasks.forEach(task => {
+        if (task.status in statusCounts) {
+          statusCounts[task.status]++;
+        }
+      });
+      
+      const result = Object.entries(statusCounts).map(([status, count]) => ({
+        status: statusLabels[status] || status,
+        count,
+      }));
+      
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tasks by status" });
+    }
+  });
+
+  app.get("/api/analytics/events-by-file", requireAuth, async (req, res) => {
+    try {
+      const allEvents = await storage.getAllEvents();
+      const allFiles = await storage.getAllFiles();
+      
+      const fileCounts: Record<number, { fileName: string; count: number }> = {};
+      
+      allFiles.forEach(file => {
+        fileCounts[file.id] = { fileName: file.name, count: 0 };
+      });
+      
+      allEvents.forEach(event => {
+        if (event.fileId && fileCounts[event.fileId]) {
+          fileCounts[event.fileId].count++;
+        }
+      });
+      
+      const result = Object.values(fileCounts)
+        .filter(f => f.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+      
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch events by file" });
+    }
+  });
+
   return httpServer;
 }

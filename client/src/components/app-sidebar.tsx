@@ -35,6 +35,7 @@ import {
   Folder,
   ListTodo,
   Bell,
+  BarChart3,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -155,6 +156,18 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                         <Link href="/files" data-testid="link-files">
                           <FolderOpen className="h-4 w-4" />
                           <span>إدارة الملفات</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/reports"}
+                        tooltip="التقارير والإحصائيات"
+                      >
+                        <Link href="/reports" data-testid="link-reports">
+                          <BarChart3 className="h-4 w-4" />
+                          <span>التقارير والإحصائيات</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

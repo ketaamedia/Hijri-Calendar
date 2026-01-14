@@ -19,6 +19,7 @@ import UsersPage from "@/pages/users";
 import FilesPage from "@/pages/files";
 import MyFilesPage from "@/pages/my-files";
 import TasksPage from "@/pages/tasks";
+import ReportsPage from "@/pages/reports";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -89,6 +90,9 @@ function Router() {
       </Route>
       <Route path="/tasks">
         {() => <ProtectedRoute component={TasksPage} />}
+      </Route>
+      <Route path="/reports">
+        {() => <ProtectedRoute component={ReportsPage} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
