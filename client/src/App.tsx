@@ -13,6 +13,7 @@ import Dashboard from "@/pages/dashboard";
 import SettingsPage from "@/pages/settings";
 import ExportPage from "@/pages/export";
 import BackupPage from "@/pages/backup";
+import UsersPage from "@/pages/users";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -68,6 +69,9 @@ function Router() {
       </Route>
       <Route path="/backup">
         {() => <ProtectedRoute component={BackupPage} />}
+      </Route>
+      <Route path="/users">
+        {() => <ProtectedRoute component={UsersPage} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
