@@ -280,6 +280,19 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const userNotificationSettings = pgTable("user_notification_settings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  emailNotifications: boolean("email_notifications").notNull().default(true),
+  inAppNotifications: boolean("in_app_notifications").notNull().default(true),
+  eventReminders: boolean("event_reminders").notNull().default(true),
+  taskNotifications: boolean("task_notifications").notNull().default(true),
+  email: text("email"),
+  reminderDaysBefore: integer("reminder_days_before").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -331,6 +344,12 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true 
 });
 
+export const insertUserNotificationSettingsSchema = createInsertSchema(userNotificationSettings).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -359,6 +378,9 @@ export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 
 export type NotificationDb = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type UserNotificationSettingsDb = typeof userNotificationSettings.$inferSelect;
+export type InsertUserNotificationSettings = z.infer<typeof insertUserNotificationSettingsSchema>;
 
 export type NotificationType = "event_reminder" | "task_assigned" | "task_updated" | "file_invitation" | "general";
 

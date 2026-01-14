@@ -10,6 +10,7 @@ import {
   tasks,
   attachments,
   notifications,
+  userNotificationSettings,
   User,
   InsertUser,
   EventDb,
@@ -28,6 +29,8 @@ import {
   InsertAttachment,
   NotificationDb,
   InsertNotification,
+  UserNotificationSettingsDb,
+  InsertUserNotificationSettings,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -98,6 +101,11 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   getUnreadNotificationCount(userId: number): Promise<number>;
   deleteNotification(id: number): Promise<boolean>;
+
+  // User Notification Settings methods
+  getUserNotificationSettings(userId: number): Promise<UserNotificationSettingsDb | undefined>;
+  createUserNotificationSettings(settings: InsertUserNotificationSettings): Promise<UserNotificationSettingsDb>;
+  updateUserNotificationSettings(userId: number, settings: Partial<InsertUserNotificationSettings>): Promise<UserNotificationSettingsDb | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -473,6 +481,41 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: number): Promise<boolean> {
     const result = await db.delete(notifications).where(eq(notifications.id, id)).returning();
     return result.length > 0;
+  }
+
+  // ==================== User Notification Settings Methods ====================
+
+  async getUserNotificationSettings(userId: number): Promise<UserNotificationSettingsDb | undefined> {
+    const result = await db.select().from(userNotificationSettings).where(eq(userNotificationSettings.userId, userId));
+    return result[0] ?? undefined;
+  }
+
+  async createUserNotificationSettings(settingsData: InsertUserNotificationSettings): Promise<UserNotificationSettingsDb> {
+    const result = await db.insert(userNotificationSettings).values(settingsData).returning();
+    return result[0];
+  }
+
+  async updateUserNotificationSettings(userId: number, settingsData: Partial<InsertUserNotificationSettings>): Promise<UserNotificationSettingsDb | undefined> {
+    const existing = await this.getUserNotificationSettings(userId);
+    
+    if (existing) {
+      const result = await db
+        .update(userNotificationSettings)
+        .set({ ...settingsData, updatedAt: new Date() })
+        .where(eq(userNotificationSettings.userId, userId))
+        .returning();
+      return result[0] ?? undefined;
+    } else {
+      return await this.createUserNotificationSettings({
+        userId,
+        emailNotifications: true,
+        inAppNotifications: true,
+        eventReminders: true,
+        taskNotifications: true,
+        reminderDaysBefore: 1,
+        ...settingsData,
+      });
+    }
   }
 }
 

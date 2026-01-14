@@ -12,6 +12,7 @@ import { useCalendarStore } from "@/hooks/use-calendar-store";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import SettingsPage from "@/pages/settings";
+import NotificationSettingsPage from "@/pages/notification-settings";
 import ExportPage from "@/pages/export";
 import BackupPage from "@/pages/backup";
 import UsersPage from "@/pages/users";
@@ -67,6 +68,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         {() => <ProtectedRoute component={SettingsPage} />}
+      </Route>
+      <Route path="/notification-settings">
+        {() => <ProtectedRoute component={NotificationSettingsPage} />}
       </Route>
       <Route path="/export">
         {() => <ProtectedRoute component={ExportPage} />}

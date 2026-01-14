@@ -34,6 +34,7 @@ import {
   FolderOpen,
   Folder,
   ListTodo,
+  Bell,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -266,6 +267,18 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                     <Link href="/settings" data-testid="link-settings">
                       <Settings className="h-4 w-4" />
                       <span>الإعدادات</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/notification-settings"}
+                    tooltip="إعدادات الإشعارات"
+                  >
+                    <Link href="/notification-settings" data-testid="link-notification-settings">
+                      <Bell className="h-4 w-4" />
+                      <span>إعدادات الإشعارات</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

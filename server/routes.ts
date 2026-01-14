@@ -729,5 +729,72 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== User Notification Settings Routes ====================
+
+  app.get("/api/settings/notifications", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      let userNotificationSettings = await storage.getUserNotificationSettings(user.id);
+      
+      if (!userNotificationSettings) {
+        userNotificationSettings = await storage.createUserNotificationSettings({
+          userId: user.id,
+          emailNotifications: true,
+          inAppNotifications: true,
+          eventReminders: true,
+          taskNotifications: true,
+          reminderDaysBefore: 1,
+        });
+      }
+      
+      res.json({
+        emailNotifications: userNotificationSettings.emailNotifications,
+        inAppNotifications: userNotificationSettings.inAppNotifications,
+        eventReminders: userNotificationSettings.eventReminders,
+        taskNotifications: userNotificationSettings.taskNotifications,
+        email: userNotificationSettings.email,
+        reminderDaysBefore: userNotificationSettings.reminderDaysBefore,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notification settings" });
+    }
+  });
+
+  const updateNotificationSettingsSchema = z.object({
+    emailNotifications: z.boolean().optional(),
+    inAppNotifications: z.boolean().optional(),
+    eventReminders: z.boolean().optional(),
+    taskNotifications: z.boolean().optional(),
+    email: z.string().email().optional().nullable(),
+    reminderDaysBefore: z.number().min(1).max(7).optional(),
+  });
+
+  app.patch("/api/settings/notifications", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const validatedData = updateNotificationSettingsSchema.parse(req.body);
+      
+      const updatedSettings = await storage.updateUserNotificationSettings(user.id, validatedData);
+      
+      if (!updatedSettings) {
+        return res.status(500).json({ error: "Failed to update notification settings" });
+      }
+      
+      res.json({
+        emailNotifications: updatedSettings.emailNotifications,
+        inAppNotifications: updatedSettings.inAppNotifications,
+        eventReminders: updatedSettings.eventReminders,
+        taskNotifications: updatedSettings.taskNotifications,
+        email: updatedSettings.email,
+        reminderDaysBefore: updatedSettings.reminderDaysBefore,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update notification settings" });
+    }
+  });
+
   return httpServer;
 }
