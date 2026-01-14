@@ -1,88 +1,159 @@
-import type { Event, InsertEvent, HijriMonthOverride, InsertHijriMonthOverride, Settings } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
+import {
+  users,
+  events,
+  hijriOverrides,
+  settings,
+  User,
+  InsertUser,
+  EventDb,
+  InsertEventDb,
+  HijriOverrideDb,
+  InsertHijriOverrideDb,
+  SettingsDb,
+  InsertSettingsDb,
+} from "@shared/schema";
 
 export interface IStorage {
-  getAllEvents(): Promise<Event[]>;
-  getEvent(id: string): Promise<Event | undefined>;
-  createEvent(event: InsertEvent): Promise<Event>;
-  updateEvent(id: string, event: InsertEvent): Promise<Event | undefined>;
-  deleteEvent(id: string): Promise<boolean>;
-  
-  getAllHijriOverrides(): Promise<HijriMonthOverride[]>;
-  getHijriOverride(id: string): Promise<HijriMonthOverride | undefined>;
-  createHijriOverride(override: InsertHijriMonthOverride): Promise<HijriMonthOverride>;
-  deleteHijriOverride(id: string): Promise<boolean>;
-  
-  getSettings(): Promise<Settings | undefined>;
-  saveSettings(settings: Settings): Promise<Settings>;
+  // Event methods
+  getAllEvents(): Promise<EventDb[]>;
+  getEvent(id: number): Promise<EventDb | undefined>;
+  createEvent(event: InsertEventDb): Promise<EventDb>;
+  updateEvent(id: number, event: Partial<InsertEventDb>): Promise<EventDb | undefined>;
+  deleteEvent(id: number): Promise<boolean>;
+
+  // Hijri override methods
+  getAllHijriOverrides(): Promise<HijriOverrideDb[]>;
+  getHijriOverride(id: number): Promise<HijriOverrideDb | undefined>;
+  createHijriOverride(override: InsertHijriOverrideDb): Promise<HijriOverrideDb>;
+  deleteHijriOverride(id: number): Promise<boolean>;
+
+  // Settings methods
+  getSettings(userId: number): Promise<SettingsDb | undefined>;
+  saveSettings(settingsData: InsertSettingsDb): Promise<SettingsDb>;
+
+  // User management methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(insertUser: InsertUser): Promise<User>;
+  updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  getAllUsers(): Promise<User[]>;
 }
 
-export class MemStorage implements IStorage {
-  private events: Map<string, Event>;
-  private hijriOverrides: Map<string, HijriMonthOverride>;
-  private settings: Settings | undefined;
+export class DatabaseStorage implements IStorage {
+  // ==================== Event Methods ====================
 
-  constructor() {
-    this.events = new Map();
-    this.hijriOverrides = new Map();
-    this.settings = undefined;
+  async getAllEvents(): Promise<EventDb[]> {
+    const result = await db.select().from(events).orderBy(desc(events.createdAt));
+    return result;
   }
 
-  async getAllEvents(): Promise<Event[]> {
-    return Array.from(this.events.values());
+  async getEvent(id: number): Promise<EventDb | undefined> {
+    const result = await db.select().from(events).where(eq(events.id, id));
+    return result[0] ?? undefined;
   }
 
-  async getEvent(id: string): Promise<Event | undefined> {
-    return this.events.get(id);
+  async createEvent(event: InsertEventDb): Promise<EventDb> {
+    const result = await db.insert(events).values(event).returning();
+    return result[0];
   }
 
-  async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const id = randomUUID();
-    const event: Event = { ...insertEvent, id };
-    this.events.set(id, event);
-    return event;
+  async updateEvent(id: number, event: Partial<InsertEventDb>): Promise<EventDb | undefined> {
+    const result = await db
+      .update(events)
+      .set(event)
+      .where(eq(events.id, id))
+      .returning();
+    return result[0] ?? undefined;
   }
 
-  async updateEvent(id: string, insertEvent: InsertEvent): Promise<Event | undefined> {
-    if (!this.events.has(id)) {
-      return undefined;
+  async deleteEvent(id: number): Promise<boolean> {
+    const result = await db.delete(events).where(eq(events.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ==================== Hijri Override Methods ====================
+
+  async getAllHijriOverrides(): Promise<HijriOverrideDb[]> {
+    const result = await db.select().from(hijriOverrides).orderBy(desc(hijriOverrides.createdAt));
+    return result;
+  }
+
+  async getHijriOverride(id: number): Promise<HijriOverrideDb | undefined> {
+    const result = await db.select().from(hijriOverrides).where(eq(hijriOverrides.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createHijriOverride(override: InsertHijriOverrideDb): Promise<HijriOverrideDb> {
+    const result = await db.insert(hijriOverrides).values(override).returning();
+    return result[0];
+  }
+
+  async deleteHijriOverride(id: number): Promise<boolean> {
+    const result = await db.delete(hijriOverrides).where(eq(hijriOverrides.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ==================== Settings Methods ====================
+
+  async getSettings(userId: number): Promise<SettingsDb | undefined> {
+    const result = await db.select().from(settings).where(eq(settings.userId, userId));
+    return result[0] ?? undefined;
+  }
+
+  async saveSettings(settingsData: InsertSettingsDb): Promise<SettingsDb> {
+    const existing = await this.getSettings(settingsData.userId);
+    
+    if (existing) {
+      const result = await db
+        .update(settings)
+        .set({ ...settingsData, updatedAt: new Date() })
+        .where(eq(settings.userId, settingsData.userId))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(settings).values(settingsData).returning();
+      return result[0];
     }
-    const event: Event = { ...insertEvent, id };
-    this.events.set(id, event);
-    return event;
   }
 
-  async deleteEvent(id: string): Promise<boolean> {
-    return this.events.delete(id);
+  // ==================== User Management Methods ====================
+
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0] ?? undefined;
   }
 
-  async getAllHijriOverrides(): Promise<HijriMonthOverride[]> {
-    return Array.from(this.hijriOverrides.values());
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0] ?? undefined;
   }
 
-  async getHijriOverride(id: string): Promise<HijriMonthOverride | undefined> {
-    return this.hijriOverrides.get(id);
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 
-  async createHijriOverride(insertOverride: InsertHijriMonthOverride): Promise<HijriMonthOverride> {
-    const id = randomUUID();
-    const override: HijriMonthOverride = { ...insertOverride, id };
-    this.hijriOverrides.set(id, override);
-    return override;
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0] ?? undefined;
   }
 
-  async deleteHijriOverride(id: string): Promise<boolean> {
-    return this.hijriOverrides.delete(id);
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
-  async getSettings(): Promise<Settings | undefined> {
-    return this.settings;
-  }
-
-  async saveSettings(settings: Settings): Promise<Settings> {
-    this.settings = settings;
-    return settings;
+  async getAllUsers(): Promise<User[]> {
+    const result = await db.select().from(users).orderBy(desc(users.createdAt));
+    return result;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

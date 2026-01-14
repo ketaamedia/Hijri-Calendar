@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { setupAuth, hashPassword } from "./auth";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,7 +61,29 @@ app.use((req, res, next) => {
   next();
 });
 
+async function createAdminUser() {
+  const existingAdmin = await storage.getUserByUsername("admin");
+  if (!existingAdmin) {
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const hashedPassword = await hashPassword(adminPassword);
+    await storage.createUser({
+      username: "admin",
+      password: hashedPassword,
+      displayName: "المدير",
+      description: "مدير النظام",
+      role: "admin",
+      isActive: true,
+      canCreateEvents: true,
+      canEditEvents: true,
+      canDeleteEvents: true,
+    });
+    log("Admin user created with username: admin");
+  }
+}
+
 (async () => {
+  setupAuth(app);
+  await createAdminUser();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
