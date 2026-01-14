@@ -64,7 +64,11 @@ app.use((req, res, next) => {
 async function createAdminUser() {
   const existingAdmin = await storage.getUserByUsername("admin");
   if (!existingAdmin) {
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      log("Warning: ADMIN_PASSWORD not set. Admin user not created. Please set ADMIN_PASSWORD environment variable.");
+      return;
+    }
     const hashedPassword = await hashPassword(adminPassword);
     await storage.createUser({
       username: "admin",
