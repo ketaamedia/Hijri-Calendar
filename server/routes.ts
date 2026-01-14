@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
-import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, type User } from "@shared/schema";
+import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, type User } from "@shared/schema";
 import { z } from "zod";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -316,6 +316,162 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // ==================== File Routes (Admin Only) ====================
+
+  app.get("/api/files", requireAuth, async (req, res) => {
+    try {
+      const allFiles = await storage.getAllFiles();
+      res.json(allFiles);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch files" });
+    }
+  });
+
+  app.get("/api/files/:id", requireAuth, async (req, res) => {
+    try {
+      const file = await storage.getFile(parseInt(req.params.id, 10));
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      res.json(file);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch file" });
+    }
+  });
+
+  const createFileSchema = z.object({
+    name: z.string().min(1, "اسم الملف مطلوب"),
+    description: z.string().optional(),
+  });
+
+  app.post("/api/files", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = createFileSchema.parse(req.body);
+      const user = req.user as User;
+      const newFile = await storage.createFile({
+        ...validatedData,
+        createdBy: user.id,
+      });
+      res.status(201).json(newFile);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create file" });
+    }
+  });
+
+  app.put("/api/files/:id", requireAdmin, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.id, 10);
+      const validatedData = createFileSchema.partial().parse(req.body);
+      const updatedFile = await storage.updateFile(fileId, validatedData);
+      if (!updatedFile) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      res.json(updatedFile);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update file" });
+    }
+  });
+
+  app.delete("/api/files/:id", requireAdmin, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.id, 10);
+      const deleted = await storage.deleteFile(fileId);
+      if (!deleted) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // ==================== File Membership Routes ====================
+
+  app.get("/api/files/:fileId/memberships", requireAuth, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.fileId, 10);
+      const memberships = await storage.getFileMembershipsWithUsers(fileId);
+      res.json(memberships);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch memberships" });
+    }
+  });
+
+  app.get("/api/users/:userId/memberships", requireAuth, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      const memberships = await storage.getUserMemberships(userId);
+      res.json(memberships);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user memberships" });
+    }
+  });
+
+  const createMembershipSchema = z.object({
+    userId: z.number(),
+    fileId: z.number(),
+    role: z.enum(["manager", "deputy", "member"]).default("member"),
+  });
+
+  app.post("/api/memberships", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = createMembershipSchema.parse(req.body);
+      
+      // Check if membership already exists
+      const existing = await storage.getMembership(validatedData.userId, validatedData.fileId);
+      if (existing) {
+        return res.status(400).json({ error: "المستخدم منضم للملف مسبقاً" });
+      }
+
+      const membership = await storage.createMembership(validatedData);
+      res.status(201).json(membership);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create membership" });
+    }
+  });
+
+  app.put("/api/memberships/:id", requireAdmin, async (req, res) => {
+    try {
+      const membershipId = parseInt(req.params.id, 10);
+      const validatedData = z.object({
+        role: z.enum(["manager", "deputy", "member"]),
+      }).parse(req.body);
+      
+      const updated = await storage.updateMembership(membershipId, validatedData);
+      if (!updated) {
+        return res.status(404).json({ error: "Membership not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update membership" });
+    }
+  });
+
+  app.delete("/api/memberships/:id", requireAdmin, async (req, res) => {
+    try {
+      const membershipId = parseInt(req.params.id, 10);
+      const deleted = await storage.deleteMembership(membershipId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Membership not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete membership" });
     }
   });
 

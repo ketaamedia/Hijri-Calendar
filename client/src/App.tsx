@@ -14,6 +14,7 @@ import SettingsPage from "@/pages/settings";
 import ExportPage from "@/pages/export";
 import BackupPage from "@/pages/backup";
 import UsersPage from "@/pages/users";
+import FilesPage from "@/pages/files";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -72,6 +73,9 @@ function Router() {
       </Route>
       <Route path="/users">
         {() => <ProtectedRoute component={UsersPage} />}
+      </Route>
+      <Route path="/files">
+        {() => <ProtectedRoute component={FilesPage} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

@@ -5,6 +5,8 @@ import {
   events,
   hijriOverrides,
   settings,
+  files,
+  fileMemberships,
   User,
   InsertUser,
   EventDb,
@@ -13,6 +15,10 @@ import {
   InsertHijriOverrideDb,
   SettingsDb,
   InsertSettingsDb,
+  FileDb,
+  InsertFile,
+  FileMembershipDb,
+  InsertFileMembership,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -40,6 +46,23 @@ export interface IStorage {
   updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
+
+  // File methods
+  getAllFiles(): Promise<FileDb[]>;
+  getFile(id: number): Promise<FileDb | undefined>;
+  createFile(file: InsertFile): Promise<FileDb>;
+  updateFile(id: number, file: Partial<InsertFile>): Promise<FileDb | undefined>;
+  deleteFile(id: number): Promise<boolean>;
+
+  // File membership methods
+  getFileMemberships(fileId: number): Promise<FileMembershipDb[]>;
+  getFileMembershipsWithUsers(fileId: number): Promise<(FileMembershipDb & { user: { id: number; username: string; displayName: string | null } })[]>;
+  getUserMemberships(userId: number): Promise<FileMembershipDb[]>;
+  getMembership(userId: number, fileId: number): Promise<FileMembershipDb | undefined>;
+  createMembership(membership: InsertFileMembership): Promise<FileMembershipDb>;
+  updateMembership(id: number, data: Partial<InsertFileMembership>): Promise<FileMembershipDb | undefined>;
+  deleteMembership(id: number): Promise<boolean>;
+  deleteMembershipByUserAndFile(userId: number, fileId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -153,6 +176,107 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     const result = await db.select().from(users).orderBy(desc(users.createdAt));
     return result;
+  }
+
+  // ==================== File Methods ====================
+
+  async getAllFiles(): Promise<FileDb[]> {
+    const result = await db.select().from(files).orderBy(desc(files.createdAt));
+    return result;
+  }
+
+  async getFile(id: number): Promise<FileDb | undefined> {
+    const result = await db.select().from(files).where(eq(files.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createFile(file: InsertFile): Promise<FileDb> {
+    const result = await db.insert(files).values(file).returning();
+    return result[0];
+  }
+
+  async updateFile(id: number, file: Partial<InsertFile>): Promise<FileDb | undefined> {
+    const result = await db
+      .update(files)
+      .set({ ...file, updatedAt: new Date() })
+      .where(eq(files.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteFile(id: number): Promise<boolean> {
+    // Delete all memberships first
+    await db.delete(fileMemberships).where(eq(fileMemberships.fileId, id));
+    const result = await db.delete(files).where(eq(files.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ==================== File Membership Methods ====================
+
+  async getFileMemberships(fileId: number): Promise<FileMembershipDb[]> {
+    const result = await db.select().from(fileMemberships).where(eq(fileMemberships.fileId, fileId));
+    return result;
+  }
+
+  async getFileMembershipsWithUsers(fileId: number): Promise<(FileMembershipDb & { user: { id: number; username: string; displayName: string | null } })[]> {
+    const result = await db
+      .select({
+        id: fileMemberships.id,
+        userId: fileMemberships.userId,
+        fileId: fileMemberships.fileId,
+        role: fileMemberships.role,
+        createdAt: fileMemberships.createdAt,
+        updatedAt: fileMemberships.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(fileMemberships)
+      .innerJoin(users, eq(fileMemberships.userId, users.id))
+      .where(eq(fileMemberships.fileId, fileId));
+    return result;
+  }
+
+  async getUserMemberships(userId: number): Promise<FileMembershipDb[]> {
+    const result = await db.select().from(fileMemberships).where(eq(fileMemberships.userId, userId));
+    return result;
+  }
+
+  async getMembership(userId: number, fileId: number): Promise<FileMembershipDb | undefined> {
+    const result = await db
+      .select()
+      .from(fileMemberships)
+      .where(and(eq(fileMemberships.userId, userId), eq(fileMemberships.fileId, fileId)));
+    return result[0] ?? undefined;
+  }
+
+  async createMembership(membership: InsertFileMembership): Promise<FileMembershipDb> {
+    const result = await db.insert(fileMemberships).values(membership).returning();
+    return result[0];
+  }
+
+  async updateMembership(id: number, data: Partial<InsertFileMembership>): Promise<FileMembershipDb | undefined> {
+    const result = await db
+      .update(fileMemberships)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(fileMemberships.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteMembership(id: number): Promise<boolean> {
+    const result = await db.delete(fileMemberships).where(eq(fileMemberships.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async deleteMembershipByUserAndFile(userId: number, fileId: number): Promise<boolean> {
+    const result = await db
+      .delete(fileMemberships)
+      .where(and(eq(fileMemberships.userId, userId), eq(fileMemberships.fileId, fileId)))
+      .returning();
+    return result.length > 0;
   }
 }
 

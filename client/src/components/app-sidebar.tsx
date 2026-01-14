@@ -31,6 +31,7 @@ import {
   Home,
   Users,
   LogOut,
+  FolderOpen,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -105,18 +106,32 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user?.role === "admin" && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/users"}
-                      tooltip="إدارة المستخدمين"
-                    >
-                      <Link href="/users" data-testid="link-users">
-                        <Users className="h-4 w-4" />
-                        <span>إدارة المستخدمين</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/users"}
+                        tooltip="إدارة المستخدمين"
+                      >
+                        <Link href="/users" data-testid="link-users">
+                          <Users className="h-4 w-4" />
+                          <span>إدارة المستخدمين</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/files"}
+                        tooltip="إدارة الملفات"
+                      >
+                        <Link href="/files" data-testid="link-files">
+                          <FolderOpen className="h-4 w-4" />
+                          <span>إدارة الملفات</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>

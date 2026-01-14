@@ -1,12 +1,21 @@
-# Al-Raznamah (الرزنامة) - Multi-User Calendar Platform
+# منصة بيت شاما (Beit Shama Platform) - Multi-User Management Platform
 
 ## Overview
 
-Al-Raznamah is a multi-user bilingual calendar platform supporting both Hijri (Islamic) and Gregorian calendars. The application is designed for Arabic-speaking users with full RTL (right-to-left) support, featuring multi-user authentication, role-based access control, event management, PDF/Excel export, and optional Electron desktop packaging. The app allows users to track events across both calendar systems with moon sighting-based Hijri date adjustments.
+Beit Shama Platform (منصة بيت شاما) is a comprehensive multi-user management platform supporting both Hijri (Islamic) and Gregorian calendars. The application is designed for Arabic-speaking users with full RTL (right-to-left) support, featuring multi-user authentication, file-based organizational structure with role-based access control, event management, PDF/Excel export, and optional Electron desktop packaging. Users are organized into "Files" (organizational units) with specific roles (Manager, Deputy, Member) determining their permissions within each file.
 
 ## Recent Changes
 
-- **2026-01-14**: Transformed from standalone app to multi-user platform with authentication
+- **2026-01-14**: Added File-Based Organizational System
+  - Renamed platform from "الرزنامة" to "منصة بيت شاما"
+  - Created files table for organizational units
+  - Created file_memberships table with role system (manager, deputy, member)
+  - Built file management page for admins with full CRUD operations
+  - Added member management with role assignment to files
+  - API endpoints for files and memberships with proper authorization
+  - Updated sidebar navigation with files management link
+
+- **2026-01-14 (earlier)**: Transformed from standalone app to multi-user platform with authentication
   - Added Passport.js authentication with session-based login
   - Implemented role-based access control (admin/user roles)
   - Created user management panel for admins
@@ -42,7 +51,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL with Drizzle ORM
 - **Session Store**: PostgreSQL via connect-pg-simple
 - **Schema**: Drizzle ORM with Zod validation schemas in `shared/schema.ts`
-- **Tables**: users, events, hijriOverrides, settings, session
+- **Tables**: users, events, hijriOverrides, settings, session, files, file_memberships
 
 ### Authentication & Authorization
 - **Login**: POST /api/login with username/password
