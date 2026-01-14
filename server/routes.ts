@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
-import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, type User } from "@shared/schema";
+import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, insertMessageSchema, type User } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage/routes";
 
@@ -1055,6 +1055,91 @@ export async function registerRoutes(
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch events by file" });
+    }
+  });
+
+  // ==================== Message Routes ====================
+
+  app.get("/api/files/:fileId/messages", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fileId = parseInt(req.params.fileId, 10);
+      const limit = parseInt(req.query.limit as string, 10) || 50;
+      const offset = parseInt(req.query.offset as string, 10) || 0;
+
+      const membership = await storage.getMembership(user.id, fileId);
+      if (!membership) {
+        return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذا الملف" });
+      }
+
+      const fileMessages = await storage.getMessagesByFileId(fileId, limit, offset);
+      res.json(fileMessages);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  const createMessageSchema = z.object({
+    content: z.string().min(1, "محتوى الرسالة مطلوب"),
+  });
+
+  app.post("/api/files/:fileId/messages", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fileId = parseInt(req.params.fileId, 10);
+
+      const membership = await storage.getMembership(user.id, fileId);
+      if (!membership) {
+        return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذا الملف" });
+      }
+
+      const validatedData = createMessageSchema.parse(req.body);
+      
+      const message = await storage.createMessage({
+        fileId,
+        userId: user.id,
+        content: validatedData.content,
+      });
+      
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  app.delete("/api/messages/:id", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const messageId = parseInt(req.params.id, 10);
+
+      const message = await storage.getMessage(messageId);
+      if (!message) {
+        return res.status(404).json({ error: "الرسالة غير موجودة" });
+      }
+
+      const membership = await storage.getMembership(user.id, message.fileId);
+      if (!membership) {
+        return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذا الملف" });
+      }
+
+      const isAuthor = message.userId === user.id;
+      const isManager = membership.role === "manager";
+
+      if (!isAuthor && !isManager) {
+        return res.status(403).json({ error: "ليس لديك صلاحية حذف هذه الرسالة" });
+      }
+
+      const deleted = await storage.deleteMessage(messageId);
+      if (!deleted) {
+        return res.status(404).json({ error: "الرسالة غير موجودة" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete message" });
     }
   });
 

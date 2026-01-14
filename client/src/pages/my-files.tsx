@@ -61,7 +61,9 @@ import {
   Loader2,
   FolderOpen,
   X,
+  MessageCircle,
 } from "lucide-react";
+import { Link } from "wouter";
 import type { FileDb, FileMembershipDb, FileRole, User, EventDb } from "@shared/schema";
 import { fileRoleNames } from "@shared/schema";
 
@@ -516,15 +518,30 @@ export default function MyFilesPage() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span data-testid={`text-member-count-${file.id}`}>{file.memberCount} أعضاء</span>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span data-testid={`text-member-count-${file.id}`}>{file.memberCount} أعضاء</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span data-testid={`text-event-count-${file.id}`}>{file.eventCount} أحداث</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span data-testid={`text-event-count-${file.id}`}>{file.eventCount} أحداث</span>
-                    </div>
+                    <Link
+                      href={`/file-chat/${file.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid={`button-chat-${file.id}`}
+                      >
+                        <MessageCircle className="h-4 w-4 ml-2" />
+                        المحادثة
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

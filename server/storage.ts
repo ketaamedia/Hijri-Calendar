@@ -12,6 +12,7 @@ import {
   notifications,
   userNotificationSettings,
   attendance,
+  messages,
   User,
   InsertUser,
   EventDb,
@@ -34,6 +35,8 @@ import {
   InsertUserNotificationSettings,
   AttendanceDb,
   InsertAttendance,
+  MessageDb,
+  InsertMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -117,6 +120,12 @@ export interface IStorage {
   updateAttendance(id: number, data: Partial<InsertAttendance>): Promise<AttendanceDb | undefined>;
   deleteAttendance(id: number): Promise<boolean>;
   getAttendanceStats(eventId: number): Promise<{ present: number; absent: number; excused: number; late: number }>;
+
+  // Message methods
+  getMessagesByFileId(fileId: number, limit?: number, offset?: number): Promise<(MessageDb & { user: { id: number; username: string; displayName: string | null } })[]>;
+  getMessage(id: number): Promise<MessageDb | undefined>;
+  createMessage(message: InsertMessage): Promise<MessageDb>;
+  deleteMessage(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -627,6 +636,46 @@ export class DatabaseStorage implements IStorage {
       else if (row.status === "late") stats.late = Number(row.count);
     }
     return stats;
+  }
+
+  // ==================== Message Methods ====================
+
+  async getMessagesByFileId(fileId: number, limit: number = 50, offset: number = 0): Promise<(MessageDb & { user: { id: number; username: string; displayName: string | null } })[]> {
+    const result = await db
+      .select({
+        id: messages.id,
+        fileId: messages.fileId,
+        userId: messages.userId,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(messages)
+      .innerJoin(users, eq(messages.userId, users.id))
+      .where(eq(messages.fileId, fileId))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return result;
+  }
+
+  async getMessage(id: number): Promise<MessageDb | undefined> {
+    const result = await db.select().from(messages).where(eq(messages.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createMessage(message: InsertMessage): Promise<MessageDb> {
+    const result = await db.insert(messages).values(message).returning();
+    return result[0];
+  }
+
+  async deleteMessage(id: number): Promise<boolean> {
+    const result = await db.delete(messages).where(eq(messages.id, id)).returning();
+    return result.length > 0;
   }
 }
 

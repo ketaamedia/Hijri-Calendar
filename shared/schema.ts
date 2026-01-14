@@ -306,6 +306,14 @@ export const attendance = pgTable("attendance", {
   uniqueEventUser: unique().on(table.eventId, table.userId),
 }));
 
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  fileId: integer("file_id").references(() => files.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -368,6 +376,11 @@ export const insertAttendanceSchema = createInsertSchema(attendance).omit({
   markedAt: true 
 });
 
+export const insertMessageSchema = createInsertSchema(messages).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -402,6 +415,9 @@ export type InsertUserNotificationSettings = z.infer<typeof insertUserNotificati
 
 export type AttendanceDb = typeof attendance.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+
+export type MessageDb = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type NotificationType = "event_reminder" | "task_assigned" | "task_updated" | "file_invitation" | "general";
 export type AttendanceStatus = "present" | "absent" | "excused" | "late";
