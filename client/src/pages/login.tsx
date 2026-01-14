@@ -71,10 +71,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-bold" data-testid="text-app-title">
-            الرزنامة
+            منصة بيت شاما
           </CardTitle>
           <CardDescription className="text-base" data-testid="text-app-subtitle">
-            منصة إدارة المناسبات
+            منصة إدارة شاملة
           </CardDescription>
         </CardHeader>
         <CardContent>

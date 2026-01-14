@@ -69,8 +69,8 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
               <Calendar className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="group-data-[collapsible=icon]:hidden text-right">
-              <h1 className="text-lg font-bold text-foreground" data-testid="text-app-title">الرزنامة</h1>
-              <p className="text-xs text-muted-foreground">منصة إدارة المناسبات</p>
+              <h1 className="text-lg font-bold text-foreground" data-testid="text-app-title">بيت شاما</h1>
+              <p className="text-xs text-muted-foreground">منصة إدارة شاملة</p>
             </div>
           </div>
         </SidebarHeader>
@@ -96,11 +96,11 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                   <SidebarMenuButton
                     asChild
                     isActive={location === "/calendar"}
-                    tooltip="الرزنامة"
+                    tooltip="التقويم"
                   >
                     <Link href="/calendar" data-testid="link-calendar">
                       <Calendar className="h-4 w-4" />
-                      <span>الرزنامة</span>
+                      <span>التقويم</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
