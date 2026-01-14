@@ -149,6 +149,7 @@ export const eventColorEnum = pgEnum("event_color", ["primary", "red", "orange",
 export const hijriReferenceEnum = pgEnum("hijri_reference", ["khamenei", "manual"]);
 export const defaultViewEnum = pgEnum("default_view", ["monthly", "weekly", "yearly"]);
 export const numeralSystemEnum = pgEnum("numeral_system", ["arabic", "hindi"]);
+export const fileRoleEnum = pgEnum("file_role", ["manager", "deputy", "member"]);
 
 // ==================== Drizzle Tables ====================
 
@@ -204,6 +205,24 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const files = pgTable("files", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const fileMemberships = pgTable("file_memberships", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  fileId: integer("file_id").references(() => files.id).notNull(),
+  role: fileRoleEnum("role").notNull().default("member"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -227,6 +246,18 @@ export const insertSettingsDbSchema = createInsertSchema(settings).omit({
   updatedAt: true 
 });
 
+export const insertFileSchema = createInsertSchema(files).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
+export const insertFileMembershipSchema = createInsertSchema(fileMemberships).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -240,3 +271,17 @@ export type InsertHijriOverrideDb = z.infer<typeof insertHijriOverrideDbSchema>;
 
 export type SettingsDb = typeof settings.$inferSelect;
 export type InsertSettingsDb = z.infer<typeof insertSettingsDbSchema>;
+
+export type FileDb = typeof files.$inferSelect;
+export type InsertFile = z.infer<typeof insertFileSchema>;
+
+export type FileMembershipDb = typeof fileMemberships.$inferSelect;
+export type InsertFileMembership = z.infer<typeof insertFileMembershipSchema>;
+
+export type FileRole = "manager" | "deputy" | "member";
+
+export const fileRoleNames: Record<FileRole, string> = {
+  manager: "مسؤول الملف",
+  deputy: "نائب المسؤول",
+  member: "عضو",
+};
