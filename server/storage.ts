@@ -13,6 +13,7 @@ import {
   userNotificationSettings,
   attendance,
   messages,
+  documents,
   User,
   InsertUser,
   EventDb,
@@ -37,6 +38,8 @@ import {
   InsertAttendance,
   MessageDb,
   InsertMessage,
+  DocumentDb,
+  InsertDocument,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -126,6 +129,13 @@ export interface IStorage {
   getMessage(id: number): Promise<MessageDb | undefined>;
   createMessage(message: InsertMessage): Promise<MessageDb>;
   deleteMessage(id: number): Promise<boolean>;
+
+  // Document methods
+  getDocumentsByFileId(fileId: number): Promise<(DocumentDb & { uploader: { id: number; username: string; displayName: string | null } | null })[]>;
+  getDocument(id: number): Promise<DocumentDb | undefined>;
+  createDocument(document: InsertDocument): Promise<DocumentDb>;
+  updateDocument(id: number, data: Partial<InsertDocument>): Promise<DocumentDb | undefined>;
+  deleteDocument(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -675,6 +685,57 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessage(id: number): Promise<boolean> {
     const result = await db.delete(messages).where(eq(messages.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ==================== Document Methods ====================
+
+  async getDocumentsByFileId(fileId: number): Promise<(DocumentDb & { uploader: { id: number; username: string; displayName: string | null } | null })[]> {
+    const result = await db
+      .select({
+        id: documents.id,
+        fileId: documents.fileId,
+        name: documents.name,
+        description: documents.description,
+        objectPath: documents.objectPath,
+        fileSize: documents.fileSize,
+        contentType: documents.contentType,
+        uploadedBy: documents.uploadedBy,
+        createdAt: documents.createdAt,
+        uploader: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(documents)
+      .leftJoin(users, eq(documents.uploadedBy, users.id))
+      .where(eq(documents.fileId, fileId))
+      .orderBy(desc(documents.createdAt));
+    return result;
+  }
+
+  async getDocument(id: number): Promise<DocumentDb | undefined> {
+    const result = await db.select().from(documents).where(eq(documents.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createDocument(document: InsertDocument): Promise<DocumentDb> {
+    const result = await db.insert(documents).values(document).returning();
+    return result[0];
+  }
+
+  async updateDocument(id: number, data: Partial<InsertDocument>): Promise<DocumentDb | undefined> {
+    const result = await db
+      .update(documents)
+      .set(data)
+      .where(eq(documents.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id)).returning();
     return result.length > 0;
   }
 }

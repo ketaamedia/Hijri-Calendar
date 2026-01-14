@@ -19,6 +19,7 @@ import UsersPage from "@/pages/users";
 import FilesPage from "@/pages/files";
 import MyFilesPage from "@/pages/my-files";
 import FileChatPage from "@/pages/file-chat";
+import DocumentLibraryPage from "@/pages/document-library";
 import TasksPage from "@/pages/tasks";
 import ReportsPage from "@/pages/reports";
 import AttendancePage from "@/pages/attendance";
@@ -92,6 +93,9 @@ function Router() {
       </Route>
       <Route path="/file-chat/:fileId">
         {() => <ProtectedRoute component={FileChatPage} />}
+      </Route>
+      <Route path="/documents/:fileId">
+        {() => <ProtectedRoute component={DocumentLibraryPage} />}
       </Route>
       <Route path="/tasks">
         {() => <ProtectedRoute component={TasksPage} />}

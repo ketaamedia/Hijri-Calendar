@@ -62,6 +62,7 @@ import {
   FolderOpen,
   X,
   MessageCircle,
+  FileText,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { FileDb, FileMembershipDb, FileRole, User, EventDb } from "@shared/schema";
@@ -529,19 +530,34 @@ export default function MyFilesPage() {
                         <span data-testid={`text-event-count-${file.id}`}>{file.eventCount} أحداث</span>
                       </div>
                     </div>
-                    <Link
-                      href={`/file-chat/${file.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        data-testid={`button-chat-${file.id}`}
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/documents/${file.id}`}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <MessageCircle className="h-4 w-4 ml-2" />
-                        المحادثة
-                      </Button>
-                    </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`button-documents-${file.id}`}
+                        >
+                          <FileText className="h-4 w-4 ml-2" />
+                          المستندات
+                        </Button>
+                      </Link>
+                      <Link
+                        href={`/file-chat/${file.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`button-chat-${file.id}`}
+                        >
+                          <MessageCircle className="h-4 w-4 ml-2" />
+                          المحادثة
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

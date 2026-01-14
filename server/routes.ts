@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
-import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, insertMessageSchema, type User } from "@shared/schema";
+import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, insertMessageSchema, insertDocumentSchema, type User } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage/routes";
 
@@ -1140,6 +1140,128 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+
+  // ==================== Document Routes ====================
+
+  app.get("/api/files/:fileId/documents", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fileId = parseInt(req.params.fileId, 10);
+
+      const membership = await storage.getMembership(user.id, fileId);
+      if (!membership && user.role !== "admin") {
+        return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذا الملف" });
+      }
+
+      const fileDocuments = await storage.getDocumentsByFileId(fileId);
+      res.json(fileDocuments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  const createDocumentSchema = z.object({
+    name: z.string().min(1, "اسم المستند مطلوب"),
+    description: z.string().optional(),
+    objectPath: z.string().min(1, "مسار الملف مطلوب"),
+    fileSize: z.number().optional(),
+    contentType: z.string().optional(),
+  });
+
+  app.post("/api/files/:fileId/documents", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const fileId = parseInt(req.params.fileId, 10);
+
+      const membership = await storage.getMembership(user.id, fileId);
+      if (!membership || (membership.role !== "manager" && membership.role !== "deputy")) {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "ليس لديك صلاحية رفع مستندات لهذا الملف" });
+        }
+      }
+
+      const validatedData = createDocumentSchema.parse(req.body);
+      
+      const document = await storage.createDocument({
+        ...validatedData,
+        fileId,
+        uploadedBy: user.id,
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create document" });
+    }
+  });
+
+  const updateDocumentSchema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+  });
+
+  app.patch("/api/documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const documentId = parseInt(req.params.id, 10);
+
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "المستند غير موجود" });
+      }
+
+      const membership = await storage.getMembership(user.id, document.fileId);
+      if (!membership || (membership.role !== "manager" && membership.role !== "deputy")) {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "ليس لديك صلاحية تعديل هذا المستند" });
+        }
+      }
+
+      const validatedData = updateDocumentSchema.parse(req.body);
+      const updatedDocument = await storage.updateDocument(documentId, validatedData);
+      
+      if (!updatedDocument) {
+        return res.status(404).json({ error: "المستند غير موجود" });
+      }
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update document" });
+    }
+  });
+
+  app.delete("/api/documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const documentId = parseInt(req.params.id, 10);
+
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "المستند غير موجود" });
+      }
+
+      const membership = await storage.getMembership(user.id, document.fileId);
+      if (!membership || (membership.role !== "manager" && membership.role !== "deputy")) {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "ليس لديك صلاحية حذف هذا المستند" });
+        }
+      }
+
+      const deleted = await storage.deleteDocument(documentId);
+      if (!deleted) {
+        return res.status(404).json({ error: "المستند غير موجود" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete document" });
     }
   });
 
