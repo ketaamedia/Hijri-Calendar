@@ -21,13 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EventForm } from "./EventForm";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Event, InsertEvent, TaskDb, TaskStatus, User } from "@shared/schema";
+import type { Event, InsertEvent, TaskDb, TaskStatus, User, AttachmentDb } from "@shared/schema";
 import { taskStatusNames } from "@shared/schema";
-import { CalendarDays, Plus, Trash2, ListTodo, CheckCircle2, Clock, PlayCircle, XCircle, User as UserIcon } from "lucide-react";
+import { CalendarDays, Plus, Trash2, ListTodo, CheckCircle2, Clock, PlayCircle, XCircle, User as UserIcon, Paperclip, Download, FileText } from "lucide-react";
 
 interface EventModalProps {
   open: boolean;
@@ -67,6 +68,17 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
       if (!eventId) return [];
       const res = await fetch(`/api/events/${eventId}/tasks`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch tasks");
+      return res.json();
+    },
+    enabled: !!eventId && open,
+  });
+
+  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery<AttachmentDb[]>({
+    queryKey: ["/api/events", eventId, "attachments"],
+    queryFn: async () => {
+      if (!eventId) return [];
+      const res = await fetch(`/api/events/${eventId}/attachments`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch attachments");
       return res.json();
     },
     enabled: !!eventId && open,
@@ -126,6 +138,39 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
     },
   });
 
+  const createAttachmentMutation = useMutation({
+    mutationFn: async (data: { fileName: string; objectPath: string; fileSize: number; contentType: string }) => {
+      return await apiRequest("POST", `/api/events/${eventId}/attachments`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "attachments"] });
+      toast({
+        title: "تم الرفع",
+        description: "تم رفع المرفق بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل حفظ معلومات المرفق",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: async (attachmentId: number) => {
+      return await apiRequest("DELETE", `/api/attachments/${attachmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "attachments"] });
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المرفق بنجاح",
+      });
+    },
+  });
+
   const handleSubmit = async (data: InsertEvent) => {
     if (event) {
       await updateEvent({ ...data, id: event.id });
@@ -159,7 +204,7 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
 
         {isEditMode ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details" className="gap-2" data-testid="tab-event-details">
                 <CalendarDays className="h-4 w-4" />
                 تفاصيل المناسبة
@@ -170,6 +215,15 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
                 {tasks.length > 0 && (
                   <Badge variant="secondary" className="mr-1">
                     {tasks.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="gap-2" data-testid="tab-event-attachments">
+                <Paperclip className="h-4 w-4" />
+                المرفقات
+                {attachments.length > 0 && (
+                  <Badge variant="secondary" className="mr-1">
+                    {attachments.length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -323,6 +377,110 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
                             className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => deleteTaskMutation.mutate(task.id)}
                             data-testid={`button-delete-task-${task.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="attachments" className="mt-4 space-y-4">
+              <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                <h4 className="font-medium text-sm text-foreground">رفع مرفق جديد</h4>
+                <ObjectUploader
+                  maxNumberOfFiles={5}
+                  maxFileSize={52428800}
+                  onGetUploadParameters={async (file) => {
+                    const response = await fetch("/api/uploads/request-url", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({
+                        name: file.name,
+                        size: file.size,
+                        contentType: file.type,
+                      }),
+                    });
+                    const data = await response.json();
+                    (file as any).objectPath = data.objectPath;
+                    return {
+                      method: "PUT" as const,
+                      url: data.uploadURL,
+                    };
+                  }}
+                  onComplete={(result) => {
+                    result.successful?.forEach((file) => {
+                      createAttachmentMutation.mutate({
+                        fileName: file.name || "unknown",
+                        objectPath: (file as any).objectPath || "",
+                        fileSize: file.size || 0,
+                        contentType: file.type || "application/octet-stream",
+                      });
+                    });
+                  }}
+                  buttonClassName="w-full"
+                >
+                  <Plus className="h-4 w-4 ml-2" />
+                  اختيار ملفات للرفع
+                </ObjectUploader>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm text-foreground">المرفقات الحالية</h4>
+                {attachmentsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => (
+                      <Skeleton key={i} className="h-14 w-full" />
+                    ))}
+                  </div>
+                ) : attachments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="text-no-attachments">
+                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>لا توجد مرفقات لهذه المناسبة</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {attachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="border rounded-lg p-3 flex items-center justify-between gap-3"
+                        data-testid={`attachment-item-${attachment.id}`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{attachment.fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(attachment.fileSize / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            asChild
+                          >
+                            <a
+                              href={attachment.objectPath}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-testid={`button-download-attachment-${attachment.id}`}
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => deleteAttachmentMutation.mutate(attachment.id)}
+                            data-testid={`button-delete-attachment-${attachment.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

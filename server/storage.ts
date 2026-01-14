@@ -8,6 +8,7 @@ import {
   files,
   fileMemberships,
   tasks,
+  attachments,
   User,
   InsertUser,
   EventDb,
@@ -22,6 +23,8 @@ import {
   InsertFileMembership,
   TaskDb,
   InsertTask,
+  AttachmentDb,
+  InsertAttachment,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +81,12 @@ export interface IStorage {
   getTasksByUserId(userId: number): Promise<(TaskDb & { event: { id: number; title: string } })[]>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<TaskDb | undefined>;
   deleteTask(id: number): Promise<boolean>;
+
+  // Attachment methods
+  createAttachment(attachment: InsertAttachment): Promise<AttachmentDb>;
+  getAttachmentsByEventId(eventId: number): Promise<AttachmentDb[]>;
+  getAttachment(id: number): Promise<AttachmentDb | undefined>;
+  deleteAttachment(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -383,6 +392,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: number): Promise<boolean> {
     const result = await db.delete(tasks).where(eq(tasks.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ==================== Attachment Methods ====================
+
+  async createAttachment(attachment: InsertAttachment): Promise<AttachmentDb> {
+    const result = await db.insert(attachments).values(attachment).returning();
+    return result[0];
+  }
+
+  async getAttachmentsByEventId(eventId: number): Promise<AttachmentDb[]> {
+    const result = await db.select().from(attachments).where(eq(attachments.eventId, eventId)).orderBy(desc(attachments.createdAt));
+    return result;
+  }
+
+  async getAttachment(id: number): Promise<AttachmentDb | undefined> {
+    const result = await db.select().from(attachments).where(eq(attachments.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async deleteAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(attachments).where(eq(attachments.id, id)).returning();
     return result.length > 0;
   }
 }

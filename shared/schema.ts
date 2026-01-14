@@ -257,6 +257,17 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const attachments = pgTable("attachments", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  fileName: text("file_name").notNull(),
+  objectPath: text("object_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  contentType: text("content_type").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -298,6 +309,11 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true 
 });
 
+export const insertAttachmentSchema = createInsertSchema(attachments).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -320,6 +336,9 @@ export type InsertFileMembership = z.infer<typeof insertFileMembershipSchema>;
 
 export type TaskDb = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+export type AttachmentDb = typeof attachments.$inferSelect;
+export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 
 export type FileRole = "manager" | "deputy" | "member";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";

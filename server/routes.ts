@@ -2,8 +2,9 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
-import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, type User } from "@shared/schema";
+import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, type User } from "@shared/schema";
 import { z } from "zod";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage/routes";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) {
@@ -604,6 +605,65 @@ export async function registerRoutes(
       res.json(userTasks);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch user tasks" });
+    }
+  });
+
+  // ==================== Object Storage Routes ====================
+  registerObjectStorageRoutes(app);
+
+  // ==================== Attachment Routes ====================
+
+  app.get("/api/events/:eventId/attachments", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId, 10);
+      const eventAttachments = await storage.getAttachmentsByEventId(eventId);
+      res.json(eventAttachments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch attachments" });
+    }
+  });
+
+  const createAttachmentSchema = z.object({
+    fileName: z.string().min(1, "اسم الملف مطلوب"),
+    objectPath: z.string().min(1, "مسار الملف مطلوب"),
+    fileSize: z.number().min(0),
+    contentType: z.string().min(1),
+  });
+
+  app.post("/api/events/:eventId/attachments", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const eventId = parseInt(req.params.eventId, 10);
+      
+      const validatedData = createAttachmentSchema.parse(req.body);
+      
+      const attachment = await storage.createAttachment({
+        ...validatedData,
+        eventId,
+        uploadedBy: user.id,
+      });
+      
+      res.status(201).json(attachment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create attachment" });
+    }
+  });
+
+  app.delete("/api/attachments/:id", requireAuth, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.id, 10);
+      const deleted = await storage.deleteAttachment(attachmentId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Attachment not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete attachment" });
     }
   });
 
