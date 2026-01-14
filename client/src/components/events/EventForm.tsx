@@ -22,11 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
-import type { Event, InsertEvent, EventColor } from "@shared/schema";
+import type { Event, InsertEvent, EventColor, FileDb } from "@shared/schema";
 import { hijriMonthNames, eventColorSchema } from "@shared/schema";
 import { gregorianToHijri, hijriToGregorian, getCurrentHijriYear, toArabicNumerals } from "@/lib/hijri-utils";
 import { useEffect } from "react";
 import { ColorPicker } from "./ColorPicker";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   title: z.string().min(1, "العنوان مطلوب"),
@@ -38,6 +39,7 @@ const formSchema = z.object({
   hijriDay: z.number(),
   isAnnual: z.boolean(),
   color: eventColorSchema,
+  fileId: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +52,10 @@ interface EventFormProps {
 
 export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
   const { selectedDate, settings, hijriOverrides } = useCalendarStore();
+  
+  const { data: files = [] } = useQuery<FileDb[]>({
+    queryKey: ['/api/files'],
+  });
   
   const defaultDate = selectedDate || new Date();
   const defaultHijri = gregorianToHijri(defaultDate, hijriOverrides);
@@ -67,6 +73,7 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
           hijriDay: event.hijriDay,
           isAnnual: event.isAnnual,
           color: event.color || "primary",
+          fileId: event.fileId,
         }
       : {
           title: "",
@@ -78,6 +85,7 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
           hijriDay: defaultHijri.day,
           isAnnual: false,
           color: "primary" as EventColor,
+          fileId: undefined,
         },
   });
 
@@ -301,6 +309,38 @@ export function EventForm({ event, onSubmit, onCancel }: EventFormProps) {
             />
           </div>
         )}
+
+        <FormField
+          control={form.control}
+          name="fileId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>الملف (اختياري)</FormLabel>
+              <Select
+                onValueChange={(v) => field.onChange(v === "none" ? undefined : parseInt(v))}
+                value={field.value?.toString() || "none"}
+              >
+                <FormControl>
+                  <SelectTrigger data-testid="select-file">
+                    <SelectValue placeholder="اختر الملف" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none" data-testid="option-no-file">بدون ملف</SelectItem>
+                  {files.map((file) => (
+                    <SelectItem key={file.id} value={file.id.toString()} data-testid={`option-file-${file.id}`}>
+                      {file.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                اختر ملفاً لربط المناسبة به أو اتركه بدون ملف لتكون مناسبة عامة
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

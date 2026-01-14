@@ -25,6 +25,7 @@ export interface IStorage {
   // Event methods
   getAllEvents(): Promise<EventDb[]>;
   getEvent(id: number): Promise<EventDb | undefined>;
+  getEventsByFileId(fileId: number): Promise<EventDb[]>;
   createEvent(event: InsertEventDb): Promise<EventDb>;
   updateEvent(id: number, event: Partial<InsertEventDb>): Promise<EventDb | undefined>;
   deleteEvent(id: number): Promise<boolean>;
@@ -76,6 +77,11 @@ export class DatabaseStorage implements IStorage {
   async getEvent(id: number): Promise<EventDb | undefined> {
     const result = await db.select().from(events).where(eq(events.id, id));
     return result[0] ?? undefined;
+  }
+
+  async getEventsByFileId(fileId: number): Promise<EventDb[]> {
+    const result = await db.select().from(events).where(eq(events.fileId, fileId)).orderBy(desc(events.createdAt));
+    return result;
   }
 
   async createEvent(event: InsertEventDb): Promise<EventDb> {

@@ -394,6 +394,19 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== File Events Routes ====================
+
+  app.get("/api/files/:fileId/events", requireAuth, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.fileId, 10);
+      const fileEvents = await storage.getEventsByFileId(fileId);
+      const eventsWithStringId = fileEvents.map(e => ({ ...e, id: String(e.id) }));
+      res.json(eventsWithStringId);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch file events" });
+    }
+  });
+
   // ==================== File Membership Routes ====================
 
   app.get("/api/files/:fileId/memberships", requireAuth, async (req, res) => {
