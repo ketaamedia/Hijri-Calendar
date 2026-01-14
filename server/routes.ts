@@ -25,6 +25,23 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Helper: Check if user is member of a file
+async function isFileMember(userId: number, fileId: number): Promise<boolean> {
+  const membership = await storage.getFileMembership(fileId, userId);
+  return !!membership;
+}
+
+// Helper: Check if user has specific role in file
+async function hasFileRole(userId: number, fileId: number, roles: string[]): Promise<boolean> {
+  const membership = await storage.getFileMembership(fileId, userId);
+  return membership ? roles.includes(membership.role) : false;
+}
+
+// Helper: Check if user is file manager or deputy
+async function isFileManagerOrDeputy(userId: number, fileId: number): Promise<boolean> {
+  return hasFileRole(userId, fileId, ['manager', 'deputy']);
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -60,6 +77,15 @@ export async function registerRoutes(
       if (user.role !== "admin" && !user.canCreateEvents) {
         return res.status(403).json({ error: "You don't have permission to create events" });
       }
+      
+      // Check file membership if fileId is provided
+      if (req.body.fileId && user.role !== "admin") {
+        const isMember = await isFileMember(user.id, req.body.fileId);
+        if (!isMember) {
+          return res.status(403).json({ error: "ليس لديك صلاحية إنشاء مناسبات في هذا الملف" });
+        }
+      }
+      
       const validatedData = insertEventDbSchema.parse({
         ...req.body,
         createdBy: user.id,
@@ -80,6 +106,24 @@ export async function registerRoutes(
       if (user.role !== "admin" && !user.canEditEvents) {
         return res.status(403).json({ error: "You don't have permission to edit events" });
       }
+      
+      // Check file membership if updating with fileId
+      if (req.body.fileId && user.role !== "admin") {
+        const isMember = await isFileMember(user.id, req.body.fileId);
+        if (!isMember) {
+          return res.status(403).json({ error: "ليس لديك صلاحية تعديل مناسبات في هذا الملف" });
+        }
+      }
+      
+      // Also check existing event's fileId if it has one
+      const existingEvent = await storage.getEvent(parseInt(req.params.id, 10));
+      if (existingEvent && existingEvent.fileId && user.role !== "admin") {
+        const isMember = await isFileMember(user.id, existingEvent.fileId);
+        if (!isMember) {
+          return res.status(403).json({ error: "ليس لديك صلاحية تعديل هذه المناسبة" });
+        }
+      }
+      
       const validatedData = insertEventDbSchema.partial().parse(req.body);
       const event = await storage.updateEvent(parseInt(req.params.id, 10), validatedData);
       if (!event) {
@@ -801,7 +845,20 @@ export async function registerRoutes(
 
   app.get("/api/events/:eventId/attendance", requireAuth, async (req, res) => {
     try {
+      const user = req.user as User;
       const eventId = parseInt(req.params.eventId, 10);
+      
+      // Check file membership for this event
+      if (user.role !== "admin") {
+        const event = await storage.getEvent(eventId);
+        if (event && event.fileId) {
+          const isMember = await isFileMember(user.id, event.fileId);
+          if (!isMember) {
+            return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذه المناسبة" });
+          }
+        }
+      }
+      
       const attendanceRecords = await storage.getAttendanceByEventId(eventId);
       res.json(attendanceRecords);
     } catch (error) {
@@ -811,7 +868,20 @@ export async function registerRoutes(
 
   app.get("/api/events/:eventId/attendance/stats", requireAuth, async (req, res) => {
     try {
+      const user = req.user as User;
       const eventId = parseInt(req.params.eventId, 10);
+      
+      // Check file membership for this event
+      if (user.role !== "admin") {
+        const event = await storage.getEvent(eventId);
+        if (event && event.fileId) {
+          const isMember = await isFileMember(user.id, event.fileId);
+          if (!isMember) {
+            return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى هذه المناسبة" });
+          }
+        }
+      }
+      
       const stats = await storage.getAttendanceStats(eventId);
       res.json(stats);
     } catch (error) {
@@ -831,6 +901,17 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       const eventId = parseInt(req.params.eventId, 10);
+      
+      // Check file membership for this event
+      if (user.role !== "admin") {
+        const event = await storage.getEvent(eventId);
+        if (event && event.fileId) {
+          const isMember = await isFileMember(user.id, event.fileId);
+          if (!isMember) {
+            return res.status(403).json({ error: "ليس لديك صلاحية تسجيل الحضور لهذه المناسبة" });
+          }
+        }
+      }
       
       const validatedData = bulkAttendanceSchema.parse(req.body);
       
@@ -857,7 +938,24 @@ export async function registerRoutes(
 
   app.patch("/api/attendance/:id", requireAuth, async (req, res) => {
     try {
+      const user = req.user as User;
       const attendanceId = parseInt(req.params.id, 10);
+      
+      // Check file membership for the attendance's event
+      if (user.role !== "admin") {
+        const attendanceRecords = await storage.getAttendanceByEventId(attendanceId);
+        const attendanceRecord = attendanceRecords.find(a => a.id === attendanceId);
+        if (attendanceRecord) {
+          const event = await storage.getEvent(attendanceRecord.eventId);
+          if (event && event.fileId) {
+            const isMember = await isFileMember(user.id, event.fileId);
+            if (!isMember) {
+              return res.status(403).json({ error: "ليس لديك صلاحية تعديل سجل الحضور" });
+            }
+          }
+        }
+      }
+      
       const updateAttendanceSchema = z.object({
         status: z.enum(["present", "absent", "excused", "late"]).optional(),
         notes: z.string().optional().nullable(),
@@ -881,8 +979,15 @@ export async function registerRoutes(
 
   app.get("/api/attendance/user/:userId", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId, 10);
-      const attendanceRecords = await storage.getAttendanceByUserId(userId);
+      const user = req.user as User;
+      const requestedUserId = parseInt(req.params.userId, 10);
+      
+      // Users can only see their own attendance unless admin
+      if (user.role !== "admin" && user.id !== requestedUserId) {
+        return res.status(403).json({ error: "ليس لديك صلاحية الوصول إلى سجل حضور هذا المستخدم" });
+      }
+      
+      const attendanceRecords = await storage.getAttendanceByUserId(requestedUserId);
       res.json(attendanceRecords);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch user attendance history" });
@@ -891,7 +996,24 @@ export async function registerRoutes(
 
   app.delete("/api/attendance/:id", requireAuth, async (req, res) => {
     try {
+      const user = req.user as User;
       const attendanceId = parseInt(req.params.id, 10);
+      
+      // Check file membership for the attendance's event
+      if (user.role !== "admin") {
+        const attendanceRecords = await storage.getAttendanceByEventId(attendanceId);
+        const attendanceRecord = attendanceRecords.find(a => a.id === attendanceId);
+        if (attendanceRecord) {
+          const event = await storage.getEvent(attendanceRecord.eventId);
+          if (event && event.fileId) {
+            const isMember = await isFileMember(user.id, event.fileId);
+            if (!isMember) {
+              return res.status(403).json({ error: "ليس لديك صلاحية حذف سجل الحضور" });
+            }
+          }
+        }
+      }
+      
       const deleted = await storage.deleteAttendance(attendanceId);
       
       if (!deleted) {
@@ -908,9 +1030,22 @@ export async function registerRoutes(
 
   app.get("/api/analytics/summary", requireAuth, async (req, res) => {
     try {
-      const allEvents = await storage.getAllEvents();
+      const user = req.user as User;
+      let allEvents = await storage.getAllEvents();
       const allUsers = await storage.getAllUsers();
-      const allFiles = await storage.getAllFiles();
+      let allFiles = await storage.getAllFiles();
+      
+      // Filter by file memberships unless admin
+      if (user.role !== "admin") {
+        const userMemberships = await storage.getUserMemberships(user.id);
+        const userFileIds = new Set(userMemberships.map(m => m.fileId));
+        
+        // Filter events: include events with no fileId OR events in user's files
+        allEvents = allEvents.filter(e => !e.fileId || userFileIds.has(e.fileId));
+        
+        // Filter files to only user's files
+        allFiles = allFiles.filter(f => userFileIds.has(f.id));
+      }
       
       // Get all tasks by fetching events and their tasks
       let allTasks: any[] = [];
@@ -960,7 +1095,16 @@ export async function registerRoutes(
 
   app.get("/api/analytics/events-by-month", requireAuth, async (req, res) => {
     try {
-      const allEvents = await storage.getAllEvents();
+      const user = req.user as User;
+      let allEvents = await storage.getAllEvents();
+      
+      // Filter by file memberships unless admin
+      if (user.role !== "admin") {
+        const userMemberships = await storage.getUserMemberships(user.id);
+        const userFileIds = new Set(userMemberships.map(m => m.fileId));
+        allEvents = allEvents.filter(e => !e.fileId || userFileIds.has(e.fileId));
+      }
+      
       const now = new Date();
       const months: { month: string; count: number }[] = [];
       
@@ -992,7 +1136,15 @@ export async function registerRoutes(
 
   app.get("/api/analytics/tasks-by-status", requireAuth, async (req, res) => {
     try {
-      const allEvents = await storage.getAllEvents();
+      const user = req.user as User;
+      let allEvents = await storage.getAllEvents();
+      
+      // Filter by file memberships unless admin
+      if (user.role !== "admin") {
+        const userMemberships = await storage.getUserMemberships(user.id);
+        const userFileIds = new Set(userMemberships.map(m => m.fileId));
+        allEvents = allEvents.filter(e => !e.fileId || userFileIds.has(e.fileId));
+      }
       
       let allTasks: any[] = [];
       for (const event of allEvents) {
@@ -1033,8 +1185,17 @@ export async function registerRoutes(
 
   app.get("/api/analytics/events-by-file", requireAuth, async (req, res) => {
     try {
-      const allEvents = await storage.getAllEvents();
-      const allFiles = await storage.getAllFiles();
+      const user = req.user as User;
+      let allEvents = await storage.getAllEvents();
+      let allFiles = await storage.getAllFiles();
+      
+      // Filter by file memberships unless admin
+      if (user.role !== "admin") {
+        const userMemberships = await storage.getUserMemberships(user.id);
+        const userFileIds = new Set(userMemberships.map(m => m.fileId));
+        allEvents = allEvents.filter(e => !e.fileId || userFileIds.has(e.fileId));
+        allFiles = allFiles.filter(f => userFileIds.has(f.id));
+      }
       
       const fileCounts: Record<number, { fileName: string; count: number }> = {};
       

@@ -84,6 +84,7 @@ export interface IStorage {
   getFileMembershipsWithUsers(fileId: number): Promise<(FileMembershipDb & { user: { id: number; username: string; displayName: string | null } })[]>;
   getUserMemberships(userId: number): Promise<FileMembershipDb[]>;
   getMembership(userId: number, fileId: number): Promise<FileMembershipDb | undefined>;
+  getFileMembership(fileId: number, userId: number): Promise<FileMembershipDb | null>;
   createMembership(membership: InsertFileMembership): Promise<FileMembershipDb>;
   updateMembership(id: number, data: Partial<InsertFileMembership>): Promise<FileMembershipDb | undefined>;
   deleteMembership(id: number): Promise<boolean>;
@@ -338,6 +339,16 @@ export class DatabaseStorage implements IStorage {
       .from(fileMemberships)
       .where(and(eq(fileMemberships.userId, userId), eq(fileMemberships.fileId, fileId)));
     return result[0] ?? undefined;
+  }
+
+  async getFileMembership(fileId: number, userId: number): Promise<FileMembershipDb | null> {
+    const [membership] = await db.select()
+      .from(fileMemberships)
+      .where(and(
+        eq(fileMemberships.fileId, fileId),
+        eq(fileMemberships.userId, userId)
+      ));
+    return membership || null;
   }
 
   async createMembership(membership: InsertFileMembership): Promise<FileMembershipDb> {
