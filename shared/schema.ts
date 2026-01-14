@@ -326,6 +326,16 @@ export const documents = pgTable("documents", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const backups = pgTable("backups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  objectPath: text("object_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  isAutomatic: boolean("is_automatic").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -398,6 +408,11 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   createdAt: true 
 });
 
+export const insertBackupSchema = createInsertSchema(backups).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -438,6 +453,9 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type DocumentDb = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type BackupDb = typeof backups.$inferSelect;
+export type InsertBackup = z.infer<typeof insertBackupSchema>;
 
 export type NotificationType = "event_reminder" | "task_assigned" | "task_updated" | "file_invitation" | "general";
 export type AttendanceStatus = "present" | "absent" | "excused" | "late";

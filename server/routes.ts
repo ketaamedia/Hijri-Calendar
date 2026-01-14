@@ -5,6 +5,7 @@ import { hashPassword } from "./auth";
 import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, insertAttachmentSchema, insertMessageSchema, insertDocumentSchema, type User } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage/routes";
+import { createBackupToObjectStorage, getBackupDownloadUrl, deleteBackupFromObjectStorage } from "./backup-service";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) {
@@ -1262,6 +1263,77 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  // ==================== Backup Routes (Admin Only) ====================
+
+  app.get("/api/backups", requireAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const backupsList = await storage.getBackups(limit);
+      res.json(backupsList);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch backups" });
+    }
+  });
+
+  app.post("/api/backups/create", requireAdmin, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const isAutomatic = req.body.isAutomatic === true;
+      
+      const result = await createBackupToObjectStorage(user.id, isAutomatic);
+      
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to create backup" });
+      }
+      
+      const backup = await storage.getBackup(result.backupId!);
+      res.status(201).json(backup);
+    } catch (error) {
+      console.error("Backup creation error:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.get("/api/backups/:id/download", requireAdmin, async (req, res) => {
+    try {
+      const backupId = parseInt(req.params.id, 10);
+      const backup = await storage.getBackup(backupId);
+      
+      if (!backup) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+      
+      const downloadUrl = await getBackupDownloadUrl(backup.objectPath);
+      res.json({ downloadUrl });
+    } catch (error) {
+      console.error("Backup download error:", error);
+      res.status(500).json({ error: "Failed to get download URL" });
+    }
+  });
+
+  app.delete("/api/backups/:id", requireAdmin, async (req, res) => {
+    try {
+      const backupId = parseInt(req.params.id, 10);
+      const backup = await storage.getBackup(backupId);
+      
+      if (!backup) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+      
+      await deleteBackupFromObjectStorage(backup.objectPath);
+      
+      const deleted = await storage.deleteBackup(backupId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Backup deletion error:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
     }
   });
 

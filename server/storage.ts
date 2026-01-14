@@ -14,6 +14,7 @@ import {
   attendance,
   messages,
   documents,
+  backups,
   User,
   InsertUser,
   EventDb,
@@ -40,6 +41,8 @@ import {
   InsertMessage,
   DocumentDb,
   InsertDocument,
+  BackupDb,
+  InsertBackup,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -136,6 +139,13 @@ export interface IStorage {
   createDocument(document: InsertDocument): Promise<DocumentDb>;
   updateDocument(id: number, data: Partial<InsertDocument>): Promise<DocumentDb | undefined>;
   deleteDocument(id: number): Promise<boolean>;
+
+  // Backup methods
+  getBackups(limit?: number): Promise<BackupDb[]>;
+  getBackup(id: number): Promise<BackupDb | undefined>;
+  createBackup(backup: InsertBackup): Promise<BackupDb>;
+  deleteBackup(id: number): Promise<boolean>;
+  createFullBackupData(): Promise<object>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -737,6 +747,62 @@ export class DatabaseStorage implements IStorage {
   async deleteDocument(id: number): Promise<boolean> {
     const result = await db.delete(documents).where(eq(documents.id, id)).returning();
     return result.length > 0;
+  }
+
+  // ==================== Backup Methods ====================
+
+  async getBackups(limit: number = 50): Promise<BackupDb[]> {
+    const result = await db.select().from(backups).orderBy(desc(backups.createdAt)).limit(limit);
+    return result;
+  }
+
+  async getBackup(id: number): Promise<BackupDb | undefined> {
+    const result = await db.select().from(backups).where(eq(backups.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createBackup(backup: InsertBackup): Promise<BackupDb> {
+    const result = await db.insert(backups).values(backup).returning();
+    return result[0];
+  }
+
+  async deleteBackup(id: number): Promise<boolean> {
+    const result = await db.delete(backups).where(eq(backups.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createFullBackupData(): Promise<object> {
+    const allEvents = await this.getAllEvents();
+    const allHijriOverrides = await this.getAllHijriOverrides();
+    const allUsers = await this.getAllUsers();
+    const allFiles = await this.getAllFiles();
+    const allTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+    const allAttachments = await db.select().from(attachments).orderBy(desc(attachments.createdAt));
+    const allNotifications = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+    const allAttendance = await db.select().from(attendance).orderBy(desc(attendance.markedAt));
+    const allMessages = await db.select().from(messages).orderBy(desc(messages.createdAt));
+    const allDocuments = await db.select().from(documents).orderBy(desc(documents.createdAt));
+    const allFileMemberships = await db.select().from(fileMemberships);
+    const allSettings = await db.select().from(settings);
+
+    const usersWithoutPassword = allUsers.map(({ password, ...u }) => u);
+
+    return {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      events: allEvents,
+      hijriOverrides: allHijriOverrides,
+      users: usersWithoutPassword,
+      files: allFiles,
+      fileMemberships: allFileMemberships,
+      tasks: allTasks,
+      attachments: allAttachments,
+      notifications: allNotifications,
+      attendance: allAttendance,
+      messages: allMessages,
+      documents: allDocuments,
+      settings: allSettings,
+    };
   }
 }
 
