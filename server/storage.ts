@@ -11,6 +11,7 @@ import {
   attachments,
   notifications,
   userNotificationSettings,
+  attendance,
   User,
   InsertUser,
   EventDb,
@@ -31,6 +32,8 @@ import {
   InsertNotification,
   UserNotificationSettingsDb,
   InsertUserNotificationSettings,
+  AttendanceDb,
+  InsertAttendance,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -106,6 +109,14 @@ export interface IStorage {
   getUserNotificationSettings(userId: number): Promise<UserNotificationSettingsDb | undefined>;
   createUserNotificationSettings(settings: InsertUserNotificationSettings): Promise<UserNotificationSettingsDb>;
   updateUserNotificationSettings(userId: number, settings: Partial<InsertUserNotificationSettings>): Promise<UserNotificationSettingsDb | undefined>;
+
+  // Attendance methods
+  getAttendanceByEventId(eventId: number): Promise<(AttendanceDb & { user: { id: number; username: string; displayName: string | null } })[]>;
+  getAttendanceByUserId(userId: number): Promise<(AttendanceDb & { event: { id: number; title: string } })[]>;
+  recordAttendance(attendanceData: InsertAttendance): Promise<AttendanceDb>;
+  updateAttendance(id: number, data: Partial<InsertAttendance>): Promise<AttendanceDb | undefined>;
+  deleteAttendance(id: number): Promise<boolean>;
+  getAttendanceStats(eventId: number): Promise<{ present: number; absent: number; excused: number; late: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -516,6 +527,106 @@ export class DatabaseStorage implements IStorage {
         ...settingsData,
       });
     }
+  }
+
+  // ==================== Attendance Methods ====================
+
+  async getAttendanceByEventId(eventId: number): Promise<(AttendanceDb & { user: { id: number; username: string; displayName: string | null } })[]> {
+    const result = await db
+      .select({
+        id: attendance.id,
+        eventId: attendance.eventId,
+        userId: attendance.userId,
+        status: attendance.status,
+        notes: attendance.notes,
+        markedAt: attendance.markedAt,
+        markedBy: attendance.markedBy,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(attendance)
+      .innerJoin(users, eq(attendance.userId, users.id))
+      .where(eq(attendance.eventId, eventId))
+      .orderBy(desc(attendance.markedAt));
+    return result;
+  }
+
+  async getAttendanceByUserId(userId: number): Promise<(AttendanceDb & { event: { id: number; title: string } })[]> {
+    const result = await db
+      .select({
+        id: attendance.id,
+        eventId: attendance.eventId,
+        userId: attendance.userId,
+        status: attendance.status,
+        notes: attendance.notes,
+        markedAt: attendance.markedAt,
+        markedBy: attendance.markedBy,
+        event: {
+          id: events.id,
+          title: events.title,
+        },
+      })
+      .from(attendance)
+      .innerJoin(events, eq(attendance.eventId, events.id))
+      .where(eq(attendance.userId, userId))
+      .orderBy(desc(attendance.markedAt));
+    return result;
+  }
+
+  async recordAttendance(attendanceData: InsertAttendance): Promise<AttendanceDb> {
+    const existing = await db
+      .select()
+      .from(attendance)
+      .where(and(eq(attendance.eventId, attendanceData.eventId), eq(attendance.userId, attendanceData.userId)));
+    
+    if (existing.length > 0) {
+      const result = await db
+        .update(attendance)
+        .set({ ...attendanceData, markedAt: new Date() })
+        .where(eq(attendance.id, existing[0].id))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(attendance).values(attendanceData).returning();
+    return result[0];
+  }
+
+  async updateAttendance(id: number, data: Partial<InsertAttendance>): Promise<AttendanceDb | undefined> {
+    const result = await db
+      .update(attendance)
+      .set({ ...data, markedAt: new Date() })
+      .where(eq(attendance.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteAttendance(id: number): Promise<boolean> {
+    const result = await db.delete(attendance).where(eq(attendance.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAttendanceStats(eventId: number): Promise<{ present: number; absent: number; excused: number; late: number }> {
+    const result = await db
+      .select({
+        status: attendance.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(attendance)
+      .where(eq(attendance.eventId, eventId))
+      .groupBy(attendance.status);
+    
+    const stats = { present: 0, absent: 0, excused: 0, late: 0 };
+    for (const row of result) {
+      if (row.status === "present") stats.present = Number(row.count);
+      else if (row.status === "absent") stats.absent = Number(row.count);
+      else if (row.status === "excused") stats.excused = Number(row.count);
+      else if (row.status === "late") stats.late = Number(row.count);
+    }
+    return stats;
   }
 }
 

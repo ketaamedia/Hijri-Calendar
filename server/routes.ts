@@ -796,6 +796,113 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== Attendance Routes ====================
+
+  app.get("/api/events/:eventId/attendance", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId, 10);
+      const attendanceRecords = await storage.getAttendanceByEventId(eventId);
+      res.json(attendanceRecords);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch attendance records" });
+    }
+  });
+
+  app.get("/api/events/:eventId/attendance/stats", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId, 10);
+      const stats = await storage.getAttendanceStats(eventId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch attendance stats" });
+    }
+  });
+
+  const recordAttendanceSchema = z.object({
+    userId: z.number(),
+    status: z.enum(["present", "absent", "excused", "late"]).default("present"),
+    notes: z.string().optional().nullable(),
+  });
+
+  const bulkAttendanceSchema = z.array(recordAttendanceSchema);
+
+  app.post("/api/events/:eventId/attendance", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const eventId = parseInt(req.params.eventId, 10);
+      
+      const validatedData = bulkAttendanceSchema.parse(req.body);
+      
+      const results = [];
+      for (const record of validatedData) {
+        const attendance = await storage.recordAttendance({
+          eventId,
+          userId: record.userId,
+          status: record.status,
+          notes: record.notes,
+          markedBy: user.id,
+        });
+        results.push(attendance);
+      }
+      
+      res.status(201).json(results);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to record attendance" });
+    }
+  });
+
+  app.patch("/api/attendance/:id", requireAuth, async (req, res) => {
+    try {
+      const attendanceId = parseInt(req.params.id, 10);
+      const updateAttendanceSchema = z.object({
+        status: z.enum(["present", "absent", "excused", "late"]).optional(),
+        notes: z.string().optional().nullable(),
+      });
+      
+      const validatedData = updateAttendanceSchema.parse(req.body);
+      const updated = await storage.updateAttendance(attendanceId, validatedData);
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Attendance record not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update attendance" });
+    }
+  });
+
+  app.get("/api/attendance/user/:userId", requireAuth, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      const attendanceRecords = await storage.getAttendanceByUserId(userId);
+      res.json(attendanceRecords);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user attendance history" });
+    }
+  });
+
+  app.delete("/api/attendance/:id", requireAuth, async (req, res) => {
+    try {
+      const attendanceId = parseInt(req.params.id, 10);
+      const deleted = await storage.deleteAttendance(attendanceId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Attendance record not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete attendance record" });
+    }
+  });
+
   // ==================== Analytics Routes ====================
 
   app.get("/api/analytics/summary", requireAuth, async (req, res) => {

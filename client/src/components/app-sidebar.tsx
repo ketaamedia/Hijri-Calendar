@@ -36,6 +36,7 @@ import {
   ListTodo,
   Bell,
   BarChart3,
+  ClipboardCheck,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -130,6 +131,18 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                     <Link href="/tasks" data-testid="link-tasks">
                       <ListTodo className="h-4 w-4" />
                       <span>مهامي</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/attendance"}
+                    tooltip="دفتر الحضور"
+                  >
+                    <Link href="/attendance" data-testid="link-attendance">
+                      <ClipboardCheck className="h-4 w-4" />
+                      <span>دفتر الحضور</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

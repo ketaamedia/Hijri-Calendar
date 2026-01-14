@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, serial, text, boolean, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, integer, timestamp, pgEnum, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 // ==================== Zod Schemas (Client-side validation) ====================
@@ -168,6 +168,7 @@ export const fileRoleEnum = pgEnum("file_role", ["manager", "deputy", "member"])
 export const recurrenceTypeEnum = pgEnum("recurrence_type", ["none", "daily", "weekly", "monthly", "yearly"]);
 export const taskStatusEnum = pgEnum("task_status", ["pending", "in_progress", "completed", "cancelled"]);
 export const notificationTypeEnum = pgEnum("notification_type", ["event_reminder", "task_assigned", "task_updated", "file_invitation", "general"]);
+export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "absent", "excused", "late"]);
 
 // ==================== Drizzle Tables ====================
 
@@ -293,6 +294,18 @@ export const userNotificationSettings = pgTable("user_notification_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const attendance = pgTable("attendance", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  status: attendanceStatusEnum("status").notNull().default("present"),
+  notes: text("notes"),
+  markedAt: timestamp("marked_at").notNull().defaultNow(),
+  markedBy: integer("marked_by").references(() => users.id),
+}, (table) => ({
+  uniqueEventUser: unique().on(table.eventId, table.userId),
+}));
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -350,6 +363,11 @@ export const insertUserNotificationSettingsSchema = createInsertSchema(userNotif
   updatedAt: true 
 });
 
+export const insertAttendanceSchema = createInsertSchema(attendance).omit({ 
+  id: true, 
+  markedAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -382,7 +400,11 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type UserNotificationSettingsDb = typeof userNotificationSettings.$inferSelect;
 export type InsertUserNotificationSettings = z.infer<typeof insertUserNotificationSettingsSchema>;
 
+export type AttendanceDb = typeof attendance.$inferSelect;
+export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+
 export type NotificationType = "event_reminder" | "task_assigned" | "task_updated" | "file_invitation" | "general";
+export type AttendanceStatus = "present" | "absent" | "excused" | "late";
 
 export type FileRole = "manager" | "deputy" | "member";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
@@ -398,4 +420,11 @@ export const taskStatusNames: Record<TaskStatus, string> = {
   in_progress: "قيد التنفيذ",
   completed: "مكتملة",
   cancelled: "ملغاة",
+};
+
+export const attendanceStatusNames: Record<AttendanceStatus, string> = {
+  present: "حاضر",
+  absent: "غائب",
+  excused: "معذور",
+  late: "متأخر",
 };
