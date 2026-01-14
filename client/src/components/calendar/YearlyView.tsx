@@ -2,6 +2,7 @@ import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { gregorianToHijri, getCalendarDays, toArabicNumerals, isToday } from "@/lib/hijri-utils";
 import { gregorianMonthNames, hijriMonthNames, type HijriMonthOverride } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { getEventsForDateRange } from "@/lib/recurrence-utils";
 
 export function YearlyView() {
   const { currentDate, setCurrentDate, setView, events, settings, hijriOverrides } = useCalendarStore();
@@ -10,15 +11,30 @@ export function YearlyView() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const getEventsForMonth = (month: number) => {
-    return events.filter((event) => {
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+    
+    const recurringOccurrences = getEventsForDateRange(events, monthStart, monthEnd);
+    const recurringEventIds = new Set(recurringOccurrences.map((occ) => occ.event.id));
+    const recurringEvents = Array.from(recurringEventIds).map((id) => 
+      events.find((e) => e.id === id)!
+    ).filter(Boolean);
+    
+    const annualEvents = events.filter((event) => {
+      if (!event.isAnnual) return false;
+      if (event.recurrenceType && event.recurrenceType !== "none") return false;
       const eventDate = new Date(event.gregorianDate);
-      if (event.isAnnual) {
-        return eventDate.getMonth() === month - 1;
-      }
-      return (
-        eventDate.getFullYear() === year && eventDate.getMonth() === month - 1
-      );
+      return eventDate.getMonth() === month - 1;
     });
+
+    const allEvents = [...recurringEvents];
+    for (const annualEvent of annualEvents) {
+      if (!allEvents.some((e) => e.id === annualEvent.id)) {
+        allEvents.push(annualEvent);
+      }
+    }
+
+    return allEvents;
   };
 
   const handleMonthClick = (month: number) => {

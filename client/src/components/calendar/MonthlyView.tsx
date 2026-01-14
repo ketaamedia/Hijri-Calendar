@@ -2,6 +2,7 @@ import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { getCalendarDays, toArabicNumerals, isSameDay, isToday } from "@/lib/hijri-utils";
 import { weekDayNames } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { getEventsForDate as getRecurringEventsForDate } from "@/lib/recurrence-utils";
 
 export function MonthlyView() {
   const { currentDate, selectedDate, setSelectedDate, events, settings, hijriOverrides } = useCalendarStore();
@@ -11,16 +12,27 @@ export function MonthlyView() {
   const days = getCalendarDays(year, month, hijriOverrides);
 
   const getEventsForDate = (date: Date) => {
-    return events.filter((event) => {
+    const recurringOccurrences = getRecurringEventsForDate(events, date);
+    const recurringEvents = recurringOccurrences.map((occ) => occ.event);
+    
+    const annualEvents = events.filter((event) => {
+      if (!event.isAnnual) return false;
+      if (event.recurrenceType && event.recurrenceType !== "none") return false;
       const eventDate = new Date(event.gregorianDate);
-      if (event.isAnnual) {
-        return (
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getDate() === date.getDate()
-        );
-      }
-      return isSameDay(eventDate, date);
+      return (
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getDate() === date.getDate()
+      );
     });
+
+    const allEvents = [...recurringEvents];
+    for (const annualEvent of annualEvents) {
+      if (!allEvents.some((e) => e.id === annualEvent.id)) {
+        allEvents.push(annualEvent);
+      }
+    }
+
+    return allEvents;
   };
 
   const shortWeekDays = ["أ", "إ", "ث", "أ", "خ", "ج", "س"];
