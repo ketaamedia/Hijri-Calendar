@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or, inArray } from "drizzle-orm";
 import {
   users,
   events,
@@ -64,6 +64,9 @@ export interface IStorage {
   updateMembership(id: number, data: Partial<InsertFileMembership>): Promise<FileMembershipDb | undefined>;
   deleteMembership(id: number): Promise<boolean>;
   deleteMembershipByUserAndFile(userId: number, fileId: number): Promise<boolean>;
+
+  // User managed files
+  getUserManagedFiles(userId: number): Promise<(FileDb & { membership: FileMembershipDb })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,6 +286,37 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(fileMemberships.userId, userId), eq(fileMemberships.fileId, fileId)))
       .returning();
     return result.length > 0;
+  }
+
+  async getUserManagedFiles(userId: number): Promise<(FileDb & { membership: FileMembershipDb })[]> {
+    const memberships = await db
+      .select()
+      .from(fileMemberships)
+      .where(
+        and(
+          eq(fileMemberships.userId, userId),
+          or(
+            eq(fileMemberships.role, "manager"),
+            eq(fileMemberships.role, "deputy")
+          )
+        )
+      );
+
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    const fileIds = memberships.map(m => m.fileId);
+    const userFiles = await db
+      .select()
+      .from(files)
+      .where(inArray(files.id, fileIds))
+      .orderBy(desc(files.createdAt));
+
+    return userFiles.map(file => {
+      const membership = memberships.find(m => m.fileId === file.id)!;
+      return { ...file, membership };
+    });
   }
 }
 

@@ -32,6 +32,7 @@ import {
   Users,
   LogOut,
   FolderOpen,
+  Folder,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -102,6 +103,18 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                     <Link href="/calendar" data-testid="link-calendar">
                       <Calendar className="h-4 w-4" />
                       <span>التقويم</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/my-files"}
+                    tooltip="ملفاتي"
+                  >
+                    <Link href="/my-files" data-testid="link-my-files">
+                      <Folder className="h-4 w-4" />
+                      <span>ملفاتي</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

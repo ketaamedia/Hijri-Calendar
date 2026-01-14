@@ -394,6 +394,31 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== My Files Route (User's Managed Files) ====================
+
+  app.get("/api/my-files", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const managedFiles = await storage.getUserManagedFiles(user.id);
+      
+      const filesWithCounts = await Promise.all(
+        managedFiles.map(async (file) => {
+          const members = await storage.getFileMemberships(file.id);
+          const events = await storage.getEventsByFileId(file.id);
+          return {
+            ...file,
+            memberCount: members.length,
+            eventCount: events.length,
+          };
+        })
+      );
+      
+      res.json(filesWithCounts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch managed files" });
+    }
+  });
+
   // ==================== File Events Routes ====================
 
   app.get("/api/files/:fileId/events", requireAuth, async (req, res) => {
