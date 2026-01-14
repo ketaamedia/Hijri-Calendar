@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
+import { useAuth } from "@/hooks/use-auth";
 import { gregorianToHijri, toArabicNumerals } from "@/lib/hijri-utils";
 import { gregorianMonthNames, hijriMonthNames } from "@shared/schema";
 import {
@@ -27,8 +28,10 @@ import {
   Database,
   Moon,
   Sun,
+  Home,
+  Users,
+  LogOut,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { EventModal } from "./events/EventModal";
 
 interface AppSidebarProps {
@@ -37,7 +40,8 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user, logout } = useAuth();
   const { view, setView, currentDate, settings, hijriOverrides } = useCalendarStore();
   const [eventModalOpen, setEventModalOpen] = useState(false);
 
@@ -49,6 +53,13 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
     { id: "yearly" as const, label: "سنوي", icon: Calendar },
   ];
 
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/login");
+  };
+
+  const canCreateEvents = user?.role === "admin" || user?.canCreateEvents;
+
   return (
     <>
       <Sidebar side="right" collapsible="icon" data-testid="app-sidebar">
@@ -59,26 +70,77 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
             </div>
             <div className="group-data-[collapsible=icon]:hidden text-right">
               <h1 className="text-lg font-bold text-foreground" data-testid="text-app-title">الرزنامة</h1>
-              <p className="text-xs text-muted-foreground">التقويم الهجري والميلادي</p>
+              <p className="text-xs text-muted-foreground">منصة إدارة المناسبات</p>
             </div>
           </div>
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupContent className="p-2">
-              <Button
-                onClick={() => setEventModalOpen(true)}
-                className="w-full gap-2 justify-center"
-                data-testid="button-new-event"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="group-data-[collapsible=icon]:hidden">مناسبة جديدة</span>
-              </Button>
+            <SidebarGroupLabel>التنقل</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/"}
+                    tooltip="الرئيسية"
+                  >
+                    <Link href="/" data-testid="link-dashboard">
+                      <Home className="h-4 w-4" />
+                      <span>الرئيسية</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/calendar"}
+                    tooltip="الرزنامة"
+                  >
+                    <Link href="/calendar" data-testid="link-calendar">
+                      <Calendar className="h-4 w-4" />
+                      <span>الرزنامة</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {user?.role === "admin" && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/users"}
+                      tooltip="إدارة المستخدمين"
+                    >
+                      <Link href="/users" data-testid="link-users">
+                        <Users className="h-4 w-4" />
+                        <span>إدارة المستخدمين</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           <SidebarSeparator />
+
+          {canCreateEvents && (
+            <>
+              <SidebarGroup>
+                <SidebarGroupContent className="p-2">
+                  <Button
+                    onClick={() => setEventModalOpen(true)}
+                    className="w-full gap-2 justify-center"
+                    data-testid="button-new-event"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="group-data-[collapsible=icon]:hidden">مناسبة جديدة</span>
+                  </Button>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarSeparator />
+            </>
+          )}
 
           <SidebarGroup>
             <SidebarGroupContent className="px-4 py-3 group-data-[collapsible=icon]:hidden">
@@ -100,28 +162,31 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
 
           <SidebarSeparator />
 
-          <SidebarGroup>
-            <SidebarGroupLabel>طريقة العرض</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {viewItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={view === item.id && location === "/"}
-                      onClick={() => setView(item.id)}
-                      tooltip={item.label}
-                      data-testid={`button-view-${item.id}`}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <SidebarSeparator />
+          {location === "/calendar" && (
+            <>
+              <SidebarGroup>
+                <SidebarGroupLabel>طريقة العرض</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {viewItems.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          isActive={view === item.id}
+                          onClick={() => setView(item.id)}
+                          tooltip={item.label}
+                          data-testid={`button-view-${item.id}`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarSeparator />
+            </>
+          )}
 
           <SidebarGroup>
             <SidebarGroupLabel>أدوات</SidebarGroupLabel>
@@ -168,7 +233,7 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-4">
+        <SidebarFooter className="p-4 space-y-2">
           <Button
             variant="ghost"
             onClick={toggleTheme}
@@ -186,6 +251,15 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                 <span className="group-data-[collapsible=icon]:hidden text-sm">الوضع الداكن</span>
               </>
             )}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 text-destructive hover:text-destructive"
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="group-data-[collapsible=icon]:hidden text-sm">تسجيل الخروج</span>
           </Button>
         </SidebarFooter>
       </Sidebar>

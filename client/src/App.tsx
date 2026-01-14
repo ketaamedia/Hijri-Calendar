@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import Home from "@/pages/home";
+import Dashboard from "@/pages/dashboard";
 import SettingsPage from "@/pages/settings";
 import ExportPage from "@/pages/export";
 import BackupPage from "@/pages/backup";
+import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 import {
@@ -19,19 +22,60 @@ import {
   markNotificationsChecked,
 } from "@/lib/notifications";
 
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background" data-testid="loading-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/settings" component={SettingsPage} />
-      <Route path="/export" component={ExportPage} />
-      <Route path="/backup" component={BackupPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/">
+        {() => <ProtectedRoute component={Dashboard} />}
+      </Route>
+      <Route path="/calendar">
+        {() => <ProtectedRoute component={Home} />}
+      </Route>
+      <Route path="/settings">
+        {() => <ProtectedRoute component={SettingsPage} />}
+      </Route>
+      <Route path="/export">
+        {() => <ProtectedRoute component={ExportPage} />}
+      </Route>
+      <Route path="/backup">
+        {() => <ProtectedRoute component={BackupPage} />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AppContent() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { loadData, isLoading, events, settings, hijriOverrides, generateAutoEvents } = useCalendarStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -39,16 +83,19 @@ function AppContent() {
     }
     return false;
   });
+  const [location] = useLocation();
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (user) {
+      loadData();
+    }
+  }, [loadData, user]);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && user) {
       generateAutoEvents();
     }
-  }, [isLoading]);
+  }, [isLoading, user]);
 
   const [hasCheckedNotificationsToday, setHasCheckedNotificationsToday] = useState(false);
 
@@ -77,7 +124,7 @@ function AppContent() {
     "--sidebar-width-icon": "3.5rem",
   };
 
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background" data-testid="loading-screen">
         <div className="flex flex-col items-center gap-4">
@@ -86,6 +133,10 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  if (location === "/login" || !user) {
+    return <Router />;
   }
 
   return (
@@ -104,8 +155,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent />
-        <Toaster />
+        <AuthProvider>
+          <AppContent />
+          <Toaster />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
