@@ -33,6 +33,7 @@ import {
   LogOut,
   FolderOpen,
   Folder,
+  ListTodo,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -115,6 +116,18 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                     <Link href="/my-files" data-testid="link-my-files">
                       <Folder className="h-4 w-4" />
                       <span>ملفاتي</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/tasks"}
+                    tooltip="مهامي"
+                  >
+                    <Link href="/tasks" data-testid="link-tasks">
+                      <ListTodo className="h-4 w-4" />
+                      <span>مهامي</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

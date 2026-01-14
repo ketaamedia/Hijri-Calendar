@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
-import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, type User } from "@shared/schema";
+import { insertEventDbSchema, insertHijriOverrideDbSchema, settingsSchema, insertUserSchema, insertFileSchema, insertFileMembershipSchema, insertTaskSchema, type User } from "@shared/schema";
 import { z } from "zod";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -510,6 +510,100 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete membership" });
+    }
+  });
+
+  // ==================== Task Routes ====================
+
+  app.get("/api/events/:eventId/tasks", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId, 10);
+      const eventTasks = await storage.getTasksByEventId(eventId);
+      res.json(eventTasks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tasks" });
+    }
+  });
+
+  const createTaskSchema = z.object({
+    title: z.string().min(1, "عنوان المهمة مطلوب"),
+    description: z.string().optional(),
+    assignedTo: z.number().optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
+  });
+
+  app.post("/api/events/:eventId/tasks", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const eventId = parseInt(req.params.eventId, 10);
+      
+      const validatedData = createTaskSchema.parse(req.body);
+      
+      const task = await storage.createTask({
+        ...validatedData,
+        eventId,
+        createdBy: user.id,
+      });
+      
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/tasks/:taskId", requireAuth, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId, 10);
+      const updateTaskSchema = z.object({
+        title: z.string().min(1).optional(),
+        description: z.string().optional().nullable(),
+        assignedTo: z.number().optional().nullable(),
+        dueDate: z.string().optional().nullable(),
+        status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+      });
+      
+      const validatedData = updateTaskSchema.parse(req.body);
+      const updatedTask = await storage.updateTask(taskId, validatedData);
+      
+      if (!updatedTask) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      
+      res.json(updatedTask);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId", requireAuth, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId, 10);
+      const deleted = await storage.deleteTask(taskId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete task" });
+    }
+  });
+
+  app.get("/api/my-tasks", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const userTasks = await storage.getTasksByUserId(user.id);
+      res.json(userTasks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user tasks" });
     }
   });
 

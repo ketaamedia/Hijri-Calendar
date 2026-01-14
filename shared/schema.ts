@@ -166,6 +166,7 @@ export const defaultViewEnum = pgEnum("default_view", ["monthly", "weekly", "yea
 export const numeralSystemEnum = pgEnum("numeral_system", ["arabic", "hindi"]);
 export const fileRoleEnum = pgEnum("file_role", ["manager", "deputy", "member"]);
 export const recurrenceTypeEnum = pgEnum("recurrence_type", ["none", "daily", "weekly", "monthly", "yearly"]);
+export const taskStatusEnum = pgEnum("task_status", ["pending", "in_progress", "completed", "cancelled"]);
 
 // ==================== Drizzle Tables ====================
 
@@ -243,6 +244,19 @@ export const fileMemberships = pgTable("file_memberships", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  status: taskStatusEnum("status").notNull().default("pending"),
+  dueDate: text("due_date"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ==================== Drizzle Insert Schemas ====================
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -278,6 +292,12 @@ export const insertFileMembershipSchema = createInsertSchema(fileMemberships).om
   updatedAt: true 
 });
 
+export const insertTaskSchema = createInsertSchema(tasks).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
 // ==================== Drizzle Types ====================
 
 export type User = typeof users.$inferSelect;
@@ -298,10 +318,21 @@ export type InsertFile = z.infer<typeof insertFileSchema>;
 export type FileMembershipDb = typeof fileMemberships.$inferSelect;
 export type InsertFileMembership = z.infer<typeof insertFileMembershipSchema>;
 
+export type TaskDb = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+
 export type FileRole = "manager" | "deputy" | "member";
+export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
 export const fileRoleNames: Record<FileRole, string> = {
   manager: "مسؤول الملف",
   deputy: "نائب المسؤول",
   member: "عضو",
+};
+
+export const taskStatusNames: Record<TaskStatus, string> = {
+  pending: "قيد الانتظار",
+  in_progress: "قيد التنفيذ",
+  completed: "مكتملة",
+  cancelled: "ملغاة",
 };

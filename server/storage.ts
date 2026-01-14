@@ -7,6 +7,7 @@ import {
   settings,
   files,
   fileMemberships,
+  tasks,
   User,
   InsertUser,
   EventDb,
@@ -19,6 +20,8 @@ import {
   InsertFile,
   FileMembershipDb,
   InsertFileMembership,
+  TaskDb,
+  InsertTask,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -67,6 +70,14 @@ export interface IStorage {
 
   // User managed files
   getUserManagedFiles(userId: number): Promise<(FileDb & { membership: FileMembershipDb })[]>;
+
+  // Task methods
+  createTask(task: InsertTask): Promise<TaskDb>;
+  getTask(id: number): Promise<TaskDb | undefined>;
+  getTasksByEventId(eventId: number): Promise<TaskDb[]>;
+  getTasksByUserId(userId: number): Promise<(TaskDb & { event: { id: number; title: string } })[]>;
+  updateTask(id: number, task: Partial<InsertTask>): Promise<TaskDb | undefined>;
+  deleteTask(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -317,6 +328,62 @@ export class DatabaseStorage implements IStorage {
       const membership = memberships.find(m => m.fileId === file.id)!;
       return { ...file, membership };
     });
+  }
+
+  // ==================== Task Methods ====================
+
+  async createTask(task: InsertTask): Promise<TaskDb> {
+    const result = await db.insert(tasks).values(task).returning();
+    return result[0];
+  }
+
+  async getTask(id: number): Promise<TaskDb | undefined> {
+    const result = await db.select().from(tasks).where(eq(tasks.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async getTasksByEventId(eventId: number): Promise<TaskDb[]> {
+    const result = await db.select().from(tasks).where(eq(tasks.eventId, eventId)).orderBy(desc(tasks.createdAt));
+    return result;
+  }
+
+  async getTasksByUserId(userId: number): Promise<(TaskDb & { event: { id: number; title: string } })[]> {
+    const result = await db
+      .select({
+        id: tasks.id,
+        eventId: tasks.eventId,
+        title: tasks.title,
+        description: tasks.description,
+        assignedTo: tasks.assignedTo,
+        status: tasks.status,
+        dueDate: tasks.dueDate,
+        createdBy: tasks.createdBy,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        event: {
+          id: events.id,
+          title: events.title,
+        },
+      })
+      .from(tasks)
+      .innerJoin(events, eq(tasks.eventId, events.id))
+      .where(eq(tasks.assignedTo, userId))
+      .orderBy(desc(tasks.createdAt));
+    return result;
+  }
+
+  async updateTask(id: number, task: Partial<InsertTask>): Promise<TaskDb | undefined> {
+    const result = await db
+      .update(tasks)
+      .set({ ...task, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteTask(id: number): Promise<boolean> {
+    const result = await db.delete(tasks).where(eq(tasks.id, id)).returning();
+    return result.length > 0;
   }
 }
 
