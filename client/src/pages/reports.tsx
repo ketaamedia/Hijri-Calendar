@@ -98,9 +98,11 @@ export default function ReportsPage() {
     });
 
     try {
-      doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
-      doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-      doc.setFont("Amiri");
+      if (amiriFontBase64 && amiriFontBase64.length > 100) {
+        doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
+        doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+        doc.setFont("Amiri");
+      }
     } catch (error) {
       console.error("Failed to add Arabic font:", error);
     }

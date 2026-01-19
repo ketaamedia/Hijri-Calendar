@@ -60,6 +60,10 @@ function formatHijriDateAr(hijri: { year: number; month: number; day: number }):
 
 function setupArabicFont(doc: jsPDF): boolean {
   try {
+    if (!amiriFontBase64 || amiriFontBase64.length < 100) {
+      console.error("Amiri font base64 is missing or too short");
+      return false;
+    }
     doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
     doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
     doc.setFont("Amiri");
