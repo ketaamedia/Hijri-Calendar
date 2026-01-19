@@ -252,6 +252,11 @@ export default function ReportsPage() {
       }
     }
 
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+    }
+
     doc.save(`تقرير_احصائيات_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 

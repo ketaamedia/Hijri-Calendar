@@ -210,15 +210,15 @@ export async function exportToPDF(
     });
   }
 
-  const pageCount = doc.getNumberOfPages();
+  const pageCount = (doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
     
     if (useArabicFont) {
-      const footerText = `صفحة ${toArabicNumeral(i)} من ${toArabicNumeral(pageCount)}`;
-      doc.text(footerText, 105, 288, { align: "center" });
+      const footerPageText = `صفحة ${toArabicNumeral(i)} من ${toArabicNumeral(pageCount)}`;
+      doc.text(footerPageText, 105, 288, { align: "center" });
       doc.text("الرزنامة - التقويم الهجري والميلادي", 105, 283, { align: "center" });
     } else {
       doc.text(`Page ${i} of ${pageCount}`, 105, 288, { align: "center" });
