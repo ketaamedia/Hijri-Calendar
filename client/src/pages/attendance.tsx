@@ -187,9 +187,15 @@ export default function AttendancePage() {
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-    doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
-    doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-    doc.setFont("Amiri");
+    try {
+      if (amiriFontBase64 && amiriFontBase64.length > 100) {
+        doc.addFileToVFS("Amiri-Regular.ttf", amiriFontBase64);
+        doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+        doc.setFont("Amiri");
+      }
+    } catch (error) {
+      console.error("Failed to add Arabic font:", error);
+    }
 
     const pageWidth = doc.internal.pageSize.getWidth();
     

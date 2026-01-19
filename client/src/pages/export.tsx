@@ -158,6 +158,9 @@ export default function ExportPage() {
 
     setIsExporting(true);
     try {
+      if (amiriFontBase64 && amiriFontBase64.length > 100) {
+        // We handle font setup inside exportToPDF but we can also ensure it here if needed
+      }
       await exportToPDF(eventsToExport, options, hijriOverrides);
       toast({
         title: "تم التصدير بنجاح",
