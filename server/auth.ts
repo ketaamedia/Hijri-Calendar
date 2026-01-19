@@ -95,6 +95,7 @@ export function setupAuth(app: Express): void {
   });
 
   app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
+    console.log(`POST /api/login received. Body:`, req.body);
     passport.authenticate("local", (err: Error | null, user: User | false, info: { message: string } | undefined) => {
       if (err) {
         return next(err);
