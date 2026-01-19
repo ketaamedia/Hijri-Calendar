@@ -59,12 +59,14 @@ export function setupAuth(app: Express): void {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        console.log(`Login attempt for user: ${username}, User found: ${!!user}`);
+        console.log(`Login attempt for user: [${username}], User found: ${!!user}`);
         if (!user) {
+          console.log(`User not found in DB: [${username}]`);
           return done(null, false, { message: "Invalid username or password" });
         }
+        console.log(`User in DB: id=${user.id}, username=[${user.username}], role=${user.role}`);
         const isMatch = await comparePassword(password, user.password);
-        console.log(`Password match for ${username}: ${isMatch}`);
+        console.log(`Password comparison for [${username}]: result=${isMatch}`);
         if (!isMatch) {
           return done(null, false, { message: "Invalid username or password" });
         }
