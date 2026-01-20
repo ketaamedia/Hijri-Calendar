@@ -41,9 +41,26 @@ export default function PrayerTimes() {
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/10">
           <iframe
             src={`${prayerTimesUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-            className="w-full h-full border-none"
+            className="w-full h-full border-none hidden sm:block"
             title="مواقيت الصلاة"
           />
+          <div className="sm:hidden flex flex-col items-center justify-center p-8 text-center space-y-4 h-full">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <FileText className="h-10 w-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">عرض مواقيت الصلاة</p>
+              <p className="text-sm text-muted-foreground px-4">
+                المتصفح قد يمنع عرض الملف مباشرة. يمكنك فتح الملف أو تحميله للاطلاع على المواقيت.
+              </p>
+            </div>
+            <Button asChild className="gap-2">
+              <a href={prayerTimesUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4" />
+                فتح أو تحميل الملف
+              </a>
+            </Button>
+          </div>
         </CardContent>
       </Card>
       
