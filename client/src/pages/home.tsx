@@ -82,7 +82,7 @@ export default function Home() {
 
         {selectedDate && view !== "yearly" && (
           <>
-            <aside className="hidden lg:block w-80 border-l border-border bg-card overflow-y-auto" data-testid="events-sidebar-desktop">
+            <aside className="hidden lg:block w-80 border-l border-border bg-card overflow-y-auto z-0" data-testid="events-sidebar-desktop">
               <div className="p-4 border-b border-border sticky top-0 bg-card z-10">
                 <div className="flex flex-row-reverse items-center justify-between mb-2">
                   <h2 className="text-lg font-semibold text-foreground" data-testid="text-events-title">
@@ -101,7 +101,7 @@ export default function Home() {
               </div>
             </aside>
 
-            <Sheet open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+            <Sheet open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)} modal={false}>
               <SheetContent side="bottom" className="lg:hidden h-[70vh] rounded-t-xl" data-testid="events-sidebar-mobile">
                 <SheetHeader className="text-right">
                   <SheetTitle>المناسبات</SheetTitle>
