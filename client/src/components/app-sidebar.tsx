@@ -118,17 +118,13 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
+                    isActive={location === "/prayer-times"}
                     tooltip="مواقيت الصلاة"
                   >
-                    <a 
-                      href={prayerTimesUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      data-testid="link-prayer-times"
-                    >
+                    <Link href="/prayer-times" data-testid="link-prayer-times">
                       <Clock className="h-4 w-4" />
                       <span>مواقيت الصلاة</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

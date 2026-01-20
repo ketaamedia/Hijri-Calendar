@@ -23,6 +23,7 @@ import DocumentLibraryPage from "@/pages/document-library";
 import TasksPage from "@/pages/tasks";
 import ReportsPage from "@/pages/reports";
 import AttendancePage from "@/pages/attendance";
+import PrayerTimesPage from "@/pages/PrayerTimes";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -105,6 +106,9 @@ function Router() {
       </Route>
       <Route path="/attendance">
         {() => <ProtectedRoute component={AttendancePage} />}
+      </Route>
+      <Route path="/prayer-times">
+        {() => <ProtectedRoute component={PrayerTimesPage} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
