@@ -37,6 +37,7 @@ import {
   Bell,
   BarChart3,
   ClipboardCheck,
+  Clock,
 } from "lucide-react";
 import { EventModal } from "./events/EventModal";
 
@@ -58,6 +59,10 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
     { id: "weekly" as const, label: "أسبوعي", icon: CalendarRange },
     { id: "yearly" as const, label: "سنوي", icon: Calendar },
   ];
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const prayerTimesUrl = `https://almanar.com.lb/static/calendars/${currentYear}/baalbek-${currentMonth}.pdf`;
 
   const handleLogout = async () => {
     await logout();
@@ -108,6 +113,22 @@ export function AppSidebar({ isDark, toggleTheme }: AppSidebarProps) {
                       <Calendar className="h-4 w-4" />
                       <span>التقويم</span>
                     </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="مواقيت الصلاة"
+                  >
+                    <a 
+                      href={prayerTimesUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      data-testid="link-prayer-times"
+                    >
+                      <Clock className="h-4 w-4" />
+                      <span>مواقيت الصلاة</span>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
