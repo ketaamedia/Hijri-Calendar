@@ -102,7 +102,13 @@ export default function Home() {
             </aside>
 
             <Sheet open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)} modal={false}>
-              <SheetContent side="bottom" className="lg:hidden h-[70vh] rounded-t-xl" data-testid="events-sidebar-mobile">
+              <SheetContent 
+                side="bottom" 
+                className="lg:hidden h-[70vh] rounded-t-xl focus:ring-0" 
+                data-testid="events-sidebar-mobile"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+              >
                 <SheetHeader className="text-right">
                   <SheetTitle>المناسبات</SheetTitle>
                 </SheetHeader>
