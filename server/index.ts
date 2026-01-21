@@ -86,8 +86,10 @@ async function createAdminUser() {
 }
 
 (async () => {
-  setupAuth(app);
+  // Create admin user first to ensure tables are hit/created if using createTableIfMissing
   await createAdminUser();
+
+  setupAuth(app);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
