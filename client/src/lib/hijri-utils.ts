@@ -25,7 +25,7 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       const nextMonth = new Date(overrideStart);
       nextMonth.setDate(nextMonth.getDate() + 30);
       
-      if (date >= overrideStart && date < nextMonth) {
+      if (date.getTime() >= overrideStart.getTime() && date.getTime() < nextMonth.getTime()) {
         const daysDiff = Math.floor((date.getTime() - overrideStart.getTime()) / (1000 * 60 * 60 * 24));
         return {
           year: override.hijriYear,
