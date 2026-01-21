@@ -4,4 +4,6 @@ module.exports = {
     tailwindcss: {},
     autoprefixer: {},
   },
+  // Suppress the warning
+  hideNothingWarning: true,
 }
