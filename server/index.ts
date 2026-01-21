@@ -86,8 +86,36 @@ async function createAdminUser() {
 }
 
 (async () => {
-  // Create admin user first to ensure tables are hit/created if using createTableIfMissing
-  await createAdminUser();
+  // Setup database tables if they don't exist
+  try {
+    const { pool } = await import("./db");
+    const { storage } = await import("./storage");
+    log("Checking database tables...");
+    
+    // Explicitly check for users table existence and create if missing
+    // This is a safety measure for environments without migrations
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
+        can_create_events BOOLEAN DEFAULT TRUE,
+        can_edit_events BOOLEAN DEFAULT TRUE,
+        can_delete_events BOOLEAN DEFAULT TRUE
+      );
+    `);
+    
+    // Run the internal storage initialization which might create other tables
+    if (typeof (storage as any).initialize === 'function') {
+      await (storage as any).initialize();
+    }
+    
+    // Create admin user
+    await createAdminUser();
+  } catch (err) {
+    log("Database initialization error: " + err);
+  }
 
   setupAuth(app);
   await registerRoutes(httpServer, app);
