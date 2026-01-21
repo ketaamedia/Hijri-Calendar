@@ -17,16 +17,24 @@ export interface DualDate {
 }
 
 export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): HijriDate {
-  const m = moment(date);
-  
+  // Use a copy of the date and set time to midnight for consistent comparison
+  const d = new Date(date.getTime());
+  d.setHours(0, 0, 0, 0);
+  const dTime = d.getTime();
+
   if (overrides && overrides.length > 0) {
     for (const override of overrides) {
       const overrideStart = new Date(override.gregorianStartDate);
-      const nextMonth = new Date(overrideStart);
+      overrideStart.setHours(0, 0, 0, 0);
+      const overrideStartTime = overrideStart.getTime();
+
+      // Assume Hijri months are 29 or 30 days
+      const nextMonth = new Date(overrideStartTime);
       nextMonth.setDate(nextMonth.getDate() + 30);
-      
-      if (date.getTime() >= overrideStart.getTime() && date.getTime() < nextMonth.getTime()) {
-        const daysDiff = Math.floor((date.getTime() - overrideStart.getTime()) / (1000 * 60 * 60 * 24));
+      const nextMonthTime = nextMonth.getTime();
+
+      if (dTime >= overrideStartTime && dTime < nextMonthTime) {
+        const daysDiff = Math.floor((dTime - overrideStartTime) / (1000 * 60 * 60 * 24));
         return {
           year: override.hijriYear,
           month: override.hijriMonth,
@@ -35,7 +43,8 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       }
     }
   }
-  
+
+  const m = moment(date);
   return {
     year: m.iYear(),
     month: m.iMonth() + 1,
