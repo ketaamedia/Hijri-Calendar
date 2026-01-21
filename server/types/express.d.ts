@@ -3,15 +3,22 @@ declare global {
     interface User {
       id: number;
       username: string;
-      isAdmin: boolean;
+      password: string;
+      displayName: string | null;
+      description: string | null;
+      role: "admin" | "user";
+      isActive: boolean;
+      canCreateEvents: boolean;
+      canEditEvents: boolean;
+      canDeleteEvents: boolean;
+      createdAt: Date;
     }
+  }
+}
 
-    interface Request {
-      user?: User;
-      isAuthenticated(): boolean;
-      logIn(user: User, done: (err: any) => void): void;
-      logout(done: (err: any) => void): void;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: Express.User;
   }
 }
 
