@@ -113,8 +113,9 @@ async function createAdminUser() {
       await (storage as any).initialize();
     }
     
-    // Create admin user
-    await createAdminUser();
+    // Create admin user with env password
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    await createAdminUser(adminPassword);
   } catch (err) {
     console.error("Database initialization error:", err);
   }
