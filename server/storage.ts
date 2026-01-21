@@ -45,6 +45,16 @@ import {
   InsertBackup,
 } from "@shared/schema";
 
+export function log(message: string) {
+  const timestamp = new Date().toLocaleTimeString('en-US', {
+    hour12: true,
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  console.log(`${timestamp} [express] ${message}`);
+}
+
 export interface IStorage {
   // Event methods
   getAllEvents(): Promise<EventDb[]>;

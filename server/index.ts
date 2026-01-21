@@ -89,8 +89,8 @@ async function createAdminUser() {
   // Setup database tables if they don't exist
   try {
     const { pool } = await import("./db");
-    const { storage } = await import("./storage");
-    log("Checking database tables...");
+    const { storage, log: serverLog } = await import("./storage");
+    serverLog("Checking database tables...");
     
     // Explicitly check for users table existence and create if missing
     // This is a safety measure for environments without migrations
@@ -99,10 +99,12 @@ async function createAdminUser() {
         id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
+        display_name TEXT,
         is_admin BOOLEAN DEFAULT FALSE,
         can_create_events BOOLEAN DEFAULT TRUE,
         can_edit_events BOOLEAN DEFAULT TRUE,
-        can_delete_events BOOLEAN DEFAULT TRUE
+        can_delete_events BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     
@@ -114,7 +116,7 @@ async function createAdminUser() {
     // Create admin user
     await createAdminUser();
   } catch (err) {
-    log("Database initialization error: " + err);
+    console.error("Database initialization error:", err);
   }
 
   setupAuth(app);
