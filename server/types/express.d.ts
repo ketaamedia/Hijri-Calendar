@@ -3,7 +3,7 @@ declare global {
     interface User {
       id: number;
       username: string;
-      password: string;
+      password?: string;
       displayName: string | null;
       description: string | null;
       role: "admin" | "user";
