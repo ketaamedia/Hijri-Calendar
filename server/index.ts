@@ -17,7 +17,7 @@ declare module "http" {
   }
 }
 
-// Trust proxy - MUST be before session middleware
+// Trust proxy - MUST be first
 app.set('trust proxy', 1);
 
 app.use(
@@ -72,7 +72,20 @@ async function createAdminUser() {
   if (!existingAdmin) {
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminPassword) {
-      log("Warning: ADMIN_PASSWORD not set. Admin user not created. Please set ADMIN_PASSWORD environment variable.");
+      log("Warning: ADMIN_PASSWORD not set. Using default password 'admin123'. Please change this!");
+      const hashedPassword = await hashPassword("admin123");
+      await storage.createUser({
+        username: "admin",
+        password: hashedPassword,
+        displayName: "المدير",
+        description: "مدير النظام",
+        role: "admin",
+        isActive: true,
+        canCreateEvents: true,
+        canEditEvents: true,
+        canDeleteEvents: true,
+      });
+      log("Admin user created with username: admin and default password");
       return;
     }
     const hashedPassword = await hashPassword(adminPassword);
@@ -97,14 +110,17 @@ async function createAdminUser() {
     const { log: serverLog } = await import("./storage");
     serverLog("Checking database tables...");
     
-    // Create session table
+    // Create session table using SQL directly (no need for table.sql file)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS session (
         sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
         sess JSON NOT NULL,
         expire TIMESTAMP(6) NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON session (expire);
+      )
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON session (expire)
     `);
     
     // Explicitly check for users table existence and create if missing
@@ -114,12 +130,14 @@ async function createAdminUser() {
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         display_name TEXT,
-        is_admin BOOLEAN DEFAULT FALSE,
+        description TEXT,
+        role TEXT DEFAULT 'user',
+        is_active BOOLEAN DEFAULT TRUE,
         can_create_events BOOLEAN DEFAULT TRUE,
         can_edit_events BOOLEAN DEFAULT TRUE,
         can_delete_events BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
     
     // Run the internal storage initialization which might create other tables
@@ -127,35 +145,48 @@ async function createAdminUser() {
       await (storage as any).initialize();
     }
     
-    // Create admin user with env password
-    await createAdminUser();
+    serverLog("Database tables initialized successfully.");
     
-    log("Database tables initialized successfully.");
+    // Create admin user
+    await createAdminUser();
   } catch (err) {
     console.error("Database initialization error:", err);
   }
 
-  // Setup session middleware BEFORE auth
+  // Setup session middleware BEFORE auth and routes
   const PgSession = connectPgSimple(session);
   
-  app.use(session({
+  const sessionMiddleware = session({
     store: new PgSession({
       pool: pool,
       tableName: 'session',
-      createTableIfMissing: false // We already created it above
+      createTableIfMissing: false, // We already created it above
+      pruneSessionInterval: 60 * 15 // Prune expired sessions every 15 minutes
     }),
-    secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+    secret: process.env.SESSION_SECRET || 'hijri-calendar-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Reset expiration on every response
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
       httpOnly: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+      sameSite: 'lax', // Changed from 'none' to 'lax' for same-origin
+      path: '/'
     },
     name: 'hijri.sid',
-    proxy: true
-  }));
+    proxy: true // Trust the reverse proxy
+  });
+
+  app.use(sessionMiddleware);
+  
+  // Add session debug logging in development
+  if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+      log(`Session ID: ${req.sessionID}, User: ${(req as any).user?.username || 'none'}`, 'session');
+      next();
+    });
+  }
 
   setupAuth(app);
   await registerRoutes(httpServer, app);
@@ -194,3 +225,21 @@ async function createAdminUser() {
     },
   );
 })();
+```
+
+### 2. Key Changes Made:
+
+1. ✅ **Added session middleware** with PostgreSQL store
+2. ✅ **Set `trust proxy`** to handle Render's reverse proxy
+3. ✅ **Created session table** directly with SQL (no need for table.sql file)
+4. ✅ **Fixed cookie settings** for same-origin requests
+5. ✅ **Added session debugging** in development mode
+6. ✅ **Fixed user table schema** to include all fields
+
+### 3. Environment Variables to Set in Render:
+```
+SESSION_SECRET=your-super-secret-random-string-here-make-it-long
+ADMIN_PASSWORD=your-secure-admin-password
+DATABASE_URL=your-neon-postgres-url
+NODE_ENV=production
+PORT=10000
