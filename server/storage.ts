@@ -738,55 +738,199 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async initialize(): Promise<void> {
-  log("Initializing database tables...");
-  try {
-    // Create all tables in order of dependency
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS users (
-        // ... your existing users table
-      );
+  async recordAttendance(attendanceData: InsertAttendance): Promise<AttendanceDb> {
+    const existing = await db
+      .select()
+      .from(attendance)
+      .where(and(eq(attendance.eventId, attendanceData.eventId), eq(attendance.userId, attendanceData.userId)));
+    
+    if (existing.length > 0) {
+      const result = await db
+        .update(attendance)
+        .set({ ...attendanceData, markedAt: new Date() })
+        .where(eq(attendance.id, existing[0].id))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(attendance).values(attendanceData).returning();
+    return result[0];
+  }
 
-      CREATE TABLE IF NOT EXISTS files (
-        // ... your existing files table
-      );
+  async updateAttendance(id: number, data: Partial<InsertAttendance>): Promise<AttendanceDb | undefined> {
+    const result = await db
+      .update(attendance)
+      .set({ ...data, markedAt: new Date() })
+      .where(eq(attendance.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
 
-      // ... other existing tables ...
-      CREATE TABLE IF NOT EXISTS attachments (
-        id SERIAL PRIMARY KEY,
-        event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        url TEXT NOT NULL,
-        file_type TEXT,
-        file_size INTEGER,
-        uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+  async deleteAttendance(id: number): Promise<boolean> {
+    const result = await db.delete(attendance).where(eq(attendance.id, id)).returning();
+    return result.length > 0;
+  }
 
-      CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        type TEXT DEFAULT 'info',
-        is_read BOOLEAN DEFAULT FALSE,
-        link TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+  async getAttendanceStats(eventId: number): Promise<{ present: number; absent: number; excused: number; late: number }> {
+    const result = await db
+      .select({
+        status: attendance.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(attendance)
+      .where(eq(attendance.eventId, eventId))
+      .groupBy(attendance.status);
+    
+    const stats = { present: 0, absent: 0, excused: 0, late: 0 };
+    for (const row of result) {
+      if (row.status === "present") stats.present = Number(row.count);
+      else if (row.status === "absent") stats.absent = Number(row.count);
+      else if (row.status === "excused") stats.excused = Number(row.count);
+      else if (row.status === "late") stats.late = Number(row.count);
+    }
+    return stats;
+  }
 
-      CREATE TABLE IF NOT EXISTS settings (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-        theme TEXT DEFAULT 'light',
-        language TEXT DEFAULT 'ar',
-        calendar_view TEXT DEFAULT 'month',
-        first_day_of_week INTEGER DEFAULT 6,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    log("Database tables initialized successfully.");
-  } catch (error) {
-    log("Error initializing database tables: " + error);
+  async getMessagesByFileId(fileId: number, limit: number = 50, offset: number = 0): Promise<(MessageDb & { user: { id: number; username: string; displayName: string | null } })[]> {
+    const result = await db
+      .select({
+        id: messages.id,
+        fileId: messages.fileId,
+        userId: messages.userId,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(messages)
+      .innerJoin(users, eq(messages.userId, users.id))
+      .where(eq(messages.fileId, fileId))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return result;
+  }
+
+  async getMessage(id: number): Promise<MessageDb | undefined> {
+    const result = await db.select().from(messages).where(eq(messages.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createMessage(message: InsertMessage): Promise<MessageDb> {
+    const result = await db.insert(messages).values(message).returning();
+    return result[0];
+  }
+
+  async deleteMessage(id: number): Promise<boolean> {
+    const result = await db.delete(messages).where(eq(messages.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getDocumentsByFileId(fileId: number): Promise<(DocumentDb & { uploader: { id: number; username: string; displayName: string | null } | null })[]> {
+    const result = await db
+      .select({
+        id: documents.id,
+        fileId: documents.fileId,
+        name: documents.name,
+        description: documents.description,
+        objectPath: documents.objectPath,
+        fileSize: documents.fileSize,
+        contentType: documents.contentType,
+        uploadedBy: documents.uploadedBy,
+        createdAt: documents.createdAt,
+        uploader: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(documents)
+      .leftJoin(users, eq(documents.uploadedBy, users.id))
+      .where(eq(documents.fileId, fileId))
+      .orderBy(desc(documents.createdAt));
+    return result;
+  }
+
+  async getDocument(id: number): Promise<DocumentDb | undefined> {
+    const result = await db.select().from(documents).where(eq(documents.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createDocument(document: InsertDocument): Promise<DocumentDb> {
+    const result = await db.insert(documents).values(document).returning();
+    return result[0];
+  }
+
+  async updateDocument(id: number, data: Partial<InsertDocument>): Promise<DocumentDb | undefined> {
+    const result = await db
+      .update(documents)
+      .set(data)
+      .where(eq(documents.id, id))
+      .returning();
+    return result[0] ?? undefined;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getBackups(limit: number = 50): Promise<BackupDb[]> {
+    const result = await db.select().from(backups).orderBy(desc(backups.createdAt)).limit(limit);
+    return result;
+  }
+
+  async getBackup(id: number): Promise<BackupDb | undefined> {
+    const result = await db.select().from(backups).where(eq(backups.id, id));
+    return result[0] ?? undefined;
+  }
+
+  async createBackup(backup: InsertBackup): Promise<BackupDb> {
+    const result = await db.insert(backups).values(backup).returning();
+    return result[0];
+  }
+
+  async deleteBackup(id: number): Promise<boolean> {
+    const result = await db.delete(backups).where(eq(backups.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createFullBackupData(): Promise<object> {
+    const allEvents = await this.getAllEvents();
+    const allHijriOverrides = await this.getAllHijriOverrides();
+    const allUsers = await this.getAllUsers();
+    const allFiles = await this.getAllFiles();
+    const allTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+    const allAttachments = await db.select().from(attachments).orderBy(desc(attachments.createdAt));
+    const allNotifications = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+    const allAttendance = await db.select().from(attendance).orderBy(desc(attendance.markedAt));
+    const allMessages = await db.select().from(messages).orderBy(desc(messages.createdAt));
+    const allDocuments = await db.select().from(documents).orderBy(desc(documents.createdAt));
+    const allFileMemberships = await db.select().from(fileMemberships);
+    const allSettings = await db.select().from(settings);
+
+    const usersWithoutPassword = allUsers.map(({ password, ...u }) => u);
+
+    return {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      events: allEvents,
+      hijriOverrides: allHijriOverrides,
+      users: usersWithoutPassword,
+      files: allFiles,
+      fileMemberships: allFileMemberships,
+      tasks: allTasks,
+      attachments: allAttachments,
+      notifications: allNotifications,
+      attendance: allAttendance,
+      messages: allMessages,
+      documents: allDocuments,
+      settings: allSettings,
+    };
   }
 }
+
+export const storage = new DatabaseStorage();
