@@ -4,9 +4,6 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -17,7 +14,7 @@ declare module "http" {
   }
 }
 
-// Trust proxy - MUST be first
+// CRITICAL: Trust proxy MUST be set BEFORE any session middleware
 app.set('trust proxy', 1);
 
 app.use(
@@ -70,23 +67,9 @@ app.use((req, res, next) => {
 async function createAdminUser() {
   const existingAdmin = await storage.getUserByUsername("admin");
   if (!existingAdmin) {
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    if (!adminPassword) {
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    if (!process.env.ADMIN_PASSWORD) {
       log("Warning: ADMIN_PASSWORD not set. Using default password 'admin123'. Please change this!");
-      const hashedPassword = await hashPassword("admin123");
-      await storage.createUser({
-        username: "admin",
-        password: hashedPassword,
-        displayName: "المدير",
-        description: "مدير النظام",
-        role: "admin",
-        isActive: true,
-        canCreateEvents: true,
-        canEditEvents: true,
-        canDeleteEvents: true,
-      });
-      log("Admin user created with username: admin and default password");
-      return;
     }
     const hashedPassword = await hashPassword(adminPassword);
     await storage.createUser({
@@ -107,10 +90,11 @@ async function createAdminUser() {
 (async () => {
   // Setup database tables if they don't exist
   try {
-    const { log: serverLog } = await import("./storage");
+    const { pool } = await import("./db");
+    const { storage, log: serverLog } = await import("./storage");
     serverLog("Checking database tables...");
     
-    // Create session table using SQL directly (no need for table.sql file)
+    // Create session table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS session (
         sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
@@ -145,50 +129,17 @@ async function createAdminUser() {
       await (storage as any).initialize();
     }
     
-    serverLog("Database tables initialized successfully.");
-    
-    // Create admin user
+    // Create admin user with env password
     await createAdminUser();
+    
+    serverLog("Database tables initialized successfully.");
   } catch (err) {
     console.error("Database initialization error:", err);
   }
 
-  // Setup session middleware BEFORE auth and routes
-  const PgSession = connectPgSimple(session);
-  
-  const sessionMiddleware = session({
-    store: new PgSession({
-      pool: pool,
-      tableName: 'session',
-      createTableIfMissing: false, // We already created it above
-      pruneSessionInterval: 60 * 15 // Prune expired sessions every 15 minutes
-    }),
-    secret: process.env.SESSION_SECRET || 'hijri-calendar-secret-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    rolling: true, // Reset expiration on every response
-    cookie: {
-      secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
-      httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      sameSite: 'lax', // Changed from 'none' to 'lax' for same-origin
-      path: '/'
-    },
-    name: 'hijri.sid',
-    proxy: true // Trust the reverse proxy
-  });
-
-  app.use(sessionMiddleware);
-  
-  // Add session debug logging in development
-  if (process.env.NODE_ENV !== 'production') {
-    app.use((req, res, next) => {
-      log(`Session ID: ${req.sessionID}, User: ${(req as any).user?.username || 'none'}`, 'session');
-      next();
-    });
-  }
-
+  // Setup auth (includes session middleware)
   setupAuth(app);
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -225,21 +176,3 @@ async function createAdminUser() {
     },
   );
 })();
-```
-
-### 2. Key Changes Made:
-
-1. ✅ **Added session middleware** with PostgreSQL store
-2. ✅ **Set `trust proxy`** to handle Render's reverse proxy
-3. ✅ **Created session table** directly with SQL (no need for table.sql file)
-4. ✅ **Fixed cookie settings** for same-origin requests
-5. ✅ **Added session debugging** in development mode
-6. ✅ **Fixed user table schema** to include all fields
-
-### 3. Environment Variables to Set in Render:
-```
-SESSION_SECRET=your-super-secret-random-string-here-make-it-long
-ADMIN_PASSWORD=your-secure-admin-password
-DATABASE_URL=your-neon-postgres-url
-NODE_ENV=production
-PORT=10000
