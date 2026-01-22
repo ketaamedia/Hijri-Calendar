@@ -135,6 +135,19 @@ export class DatabaseStorage implements IStorage {
   async initialize(): Promise<void> {
   log("Initializing database tables...");
   try {
+    // Drop existing tables to recreate with correct schema
+    await db.execute(sql`
+      DROP TABLE IF EXISTS backups CASCADE;
+      DROP TABLE IF EXISTS documents CASCADE;
+      DROP TABLE IF EXISTS messages CASCADE;
+      DROP TABLE IF EXISTS attendance CASCADE;
+      DROP TABLE IF EXISTS attachments CASCADE;
+      DROP TABLE IF EXISTS tasks CASCADE;
+      DROP TABLE IF EXISTS events CASCADE;
+      DROP TABLE IF EXISTS hijri_overrides CASCADE;
+    `);
+    
+    // Now create all tables with correct schema
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -195,10 +208,10 @@ export class DatabaseStorage implements IStorage {
         event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
         title TEXT NOT NULL,
         description TEXT,
-        assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        assigned_to INTEGER REFERENCES users(id),
         status TEXT NOT NULL DEFAULT 'pending',
         due_date TEXT,
-        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -210,7 +223,7 @@ export class DatabaseStorage implements IStorage {
         object_path TEXT NOT NULL,
         file_size INTEGER NOT NULL,
         content_type TEXT NOT NULL,
-        uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        uploaded_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -232,7 +245,7 @@ export class DatabaseStorage implements IStorage {
         status TEXT NOT NULL DEFAULT 'present',
         notes TEXT,
         marked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        marked_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        marked_by INTEGER REFERENCES users(id),
         UNIQUE(event_id, user_id)
       );
 
@@ -285,7 +298,7 @@ export class DatabaseStorage implements IStorage {
         object_path TEXT NOT NULL,
         file_size INTEGER,
         content_type TEXT,
-        uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        uploaded_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
