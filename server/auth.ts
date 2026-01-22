@@ -40,22 +40,22 @@ export function setupAuth(app: Express): void {
     secret: process.env.SESSION_SECRET || "hijri-calendar-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
-    rolling: true, // Reset expiration on every response
+    rolling: true,
     cookie: {
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // Changed from "none" to "lax" - important fix!
+      sameSite: "lax",
       httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      path: '/'
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/"
     },
     store: new PgStore({
       pool: pool,
-      tableName: 'session',
-      createTableIfMissing: false, // Table already created in index.ts
-      pruneSessionInterval: 60 * 15 // Clean up every 15 minutes
+      tableName: "session",
+      createTableIfMissing: false,
+      pruneSessionInterval: 60 * 15
     }),
-    proxy: true, // Trust the reverse proxy
-    name: 'hijri.sid'
+    proxy: true,
+    name: "hijri.sid"
   };
 
   app.use(session(sessionSettings));
@@ -134,20 +134,3 @@ export function setupAuth(app: Express): void {
     res.json(req.user);
   });
 }
-```
-
-### Key Changes Made:
-
-1. ✅ **Changed `sameSite` from `"none"` to `"lax"`** - This is critical! `"none"` requires cross-origin requests and strict HTTPS, but since your frontend and backend are on the same domain (hijri-calendar.onrender.com), you should use `"lax"`
-2. ✅ **Added `proxy: true`** to trust Render's reverse proxy
-3. ✅ **Added `rolling: true`** to refresh session on each request
-4. ✅ **Added `name: 'hijri.sid'`** for a custom session cookie name
-5. ✅ **Added `path: '/'`** to ensure cookie works across all routes
-6. ✅ **Set `trust proxy` in index.ts BEFORE setupAuth**
-
-### Environment Variables in Render:
-```
-SESSION_SECRET=use-a-very-long-random-string-here-at-least-32-characters
-ADMIN_PASSWORD=your-secure-admin-password
-DATABASE_URL=your-neon-postgres-connection-string
-NODE_ENV=production
