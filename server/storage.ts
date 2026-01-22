@@ -135,19 +135,7 @@ export class DatabaseStorage implements IStorage {
   async initialize(): Promise<void> {
   log("Initializing database tables...");
   try {
-    // Drop existing tables to recreate with correct schema
-    await db.execute(sql`
-      DROP TABLE IF EXISTS backups CASCADE;
-      DROP TABLE IF EXISTS documents CASCADE;
-      DROP TABLE IF EXISTS messages CASCADE;
-      DROP TABLE IF EXISTS attendance CASCADE;
-      DROP TABLE IF EXISTS attachments CASCADE;
-      DROP TABLE IF EXISTS tasks CASCADE;
-      DROP TABLE IF EXISTS events CASCADE;
-      DROP TABLE IF EXISTS hijri_overrides CASCADE;
-    `);
-    
-    // Now create all tables with correct schema
+    // Create all tables with correct schema
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
