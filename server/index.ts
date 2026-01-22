@@ -4,6 +4,9 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -13,6 +16,9 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// Trust proxy - MUST be before session middleware
+app.set('trust proxy', 1);
 
 app.use(
   express.json({
@@ -88,12 +94,20 @@ async function createAdminUser() {
 (async () => {
   // Setup database tables if they don't exist
   try {
-    const { pool } = await import("./db");
-    const { storage, log: serverLog } = await import("./storage");
+    const { log: serverLog } = await import("./storage");
     serverLog("Checking database tables...");
     
+    // Create session table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS session (
+        sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
+        sess JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON session (expire);
+    `);
+    
     // Explicitly check for users table existence and create if missing
-    // This is a safety measure for environments without migrations
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -114,11 +128,34 @@ async function createAdminUser() {
     }
     
     // Create admin user with env password
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
     await createAdminUser();
+    
+    log("Database tables initialized successfully.");
   } catch (err) {
     console.error("Database initialization error:", err);
   }
+
+  // Setup session middleware BEFORE auth
+  const PgSession = connectPgSimple(session);
+  
+  app.use(session({
+    store: new PgSession({
+      pool: pool,
+      tableName: 'session',
+      createTableIfMissing: false // We already created it above
+    }),
+    secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+    },
+    name: 'hijri.sid',
+    proxy: true
+  }));
 
   setupAuth(app);
   await registerRoutes(httpServer, app);
