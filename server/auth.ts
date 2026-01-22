@@ -35,21 +35,27 @@ export async function comparePassword(password: string, hash: string): Promise<b
 
 export function setupAuth(app: Express): void {
   const PgStore = connectPgSimple(session);
-
+  
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "hijri-calendar-secret-key",
+    secret: process.env.SESSION_SECRET || "hijri-calendar-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Reset expiration on every response
     cookie: {
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax", // Changed from "none" to "lax" - important fix!
       httpOnly: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
     },
     store: new PgStore({
       pool: pool,
-      createTableIfMissing: true,
+      tableName: 'session',
+      createTableIfMissing: false, // Table already created in index.ts
+      pruneSessionInterval: 60 * 15 // Clean up every 15 minutes
     }),
+    proxy: true, // Trust the reverse proxy
+    name: 'hijri.sid'
   };
 
   app.use(session(sessionSettings));
@@ -63,10 +69,12 @@ export function setupAuth(app: Express): void {
         if (!user) {
           return done(null, false, { message: "Invalid username or password" });
         }
+
         const isMatch = await comparePassword(password, user.password);
         if (!isMatch) {
           return done(null, false, { message: "Invalid username or password" });
         }
+
         return done(null, user);
       } catch (error) {
         return done(error);
@@ -99,6 +107,7 @@ export function setupAuth(app: Express): void {
       if (!user) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
+
       req.logIn(user, (err) => {
         if (err) {
           return next(err);
@@ -125,3 +134,20 @@ export function setupAuth(app: Express): void {
     res.json(req.user);
   });
 }
+```
+
+### Key Changes Made:
+
+1. ✅ **Changed `sameSite` from `"none"` to `"lax"`** - This is critical! `"none"` requires cross-origin requests and strict HTTPS, but since your frontend and backend are on the same domain (hijri-calendar.onrender.com), you should use `"lax"`
+2. ✅ **Added `proxy: true`** to trust Render's reverse proxy
+3. ✅ **Added `rolling: true`** to refresh session on each request
+4. ✅ **Added `name: 'hijri.sid'`** for a custom session cookie name
+5. ✅ **Added `path: '/'`** to ensure cookie works across all routes
+6. ✅ **Set `trust proxy` in index.ts BEFORE setupAuth**
+
+### Environment Variables in Render:
+```
+SESSION_SECRET=use-a-very-long-random-string-here-at-least-32-characters
+ADMIN_PASSWORD=your-secure-admin-password
+DATABASE_URL=your-neon-postgres-connection-string
+NODE_ENV=production
