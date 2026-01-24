@@ -17,28 +17,22 @@ export interface DualDate {
 }
 
 export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): HijriDate {
-  // Use a copy of the date and set time to midnight for consistent comparison
   const d = new Date(date.getTime());
   d.setHours(0, 0, 0, 0);
   const dTime = d.getTime();
 
   if (overrides && overrides.length > 0) {
-    // Sort overrides chronologically
     const sortedOverrides = [...overrides].sort((a, b) => 
       new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
     );
 
-    // Find the override that covers this date
     for (let i = 0; i < sortedOverrides.length; i++) {
       const current = sortedOverrides[i];
       const start = new Date(current.gregorianStartDate);
       start.setHours(0, 0, 0, 0);
       const startTime = start.getTime();
 
-      // Calculate the number of days in this Hijri month
       const hijriMonthDays = getHijriMonthDays(current.hijriYear, current.hijriMonth);
-      
-      // End time is start time + number of days in the Hijri month
       const endTime = startTime + (hijriMonthDays * 24 * 60 * 60 * 1000);
 
       if (dTime >= startTime && dTime < endTime) {
@@ -51,14 +45,6 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       }
     }
   }
-
-  const m = moment(date);
-  return {
-    year: m.iYear(),
-    month: m.iMonth() + 1,
-    day: m.iDate(),
-  };
-}
 
   const m = moment(date);
   return {
