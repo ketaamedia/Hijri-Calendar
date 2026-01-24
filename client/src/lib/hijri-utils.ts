@@ -26,15 +26,20 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
     );
 
+    // البحث عن الـ override المناسب
     for (let i = 0; i < sortedOverrides.length; i++) {
       const current = sortedOverrides[i];
       const start = new Date(current.gregorianStartDate);
       start.setHours(0, 0, 0, 0);
       const startTime = start.getTime();
 
+      // حساب عدد أيام الشهر الهجري
       const hijriMonthDays = getHijriMonthDays(current.hijriYear, current.hijriMonth);
+      
+      // نهاية هذا الشهر = بداية + عدد الأيام
       const endTime = startTime + (hijriMonthDays * 24 * 60 * 60 * 1000);
 
+      // إذا كان التاريخ يقع ضمن هذا الـ override
       if (dTime >= startTime && dTime < endTime) {
         const daysDiff = Math.floor((dTime - startTime) / (1000 * 60 * 60 * 24));
         return {
@@ -44,8 +49,40 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
         };
       }
     }
+
+    // إذا كان التاريخ بعد آخر override
+    // نحسب الفرق ونضيفه على آخر override
+    const lastOverride = sortedOverrides[sortedOverrides.length - 1];
+    const lastStart = new Date(lastOverride.gregorianStartDate);
+    lastStart.setHours(0, 0, 0, 0);
+    
+    if (dTime >= lastStart.getTime()) {
+      // حساب عدد الأيام من آخر override
+      const daysSinceLastOverride = Math.floor((dTime - lastStart.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // بداية من آخر override، نحسب التاريخ الهجري
+      let currentHijriYear = lastOverride.hijriYear;
+      let currentHijriMonth = lastOverride.hijriMonth;
+      let remainingDays = daysSinceLastOverride;
+      
+      while (remainingDays >= getHijriMonthDays(currentHijriYear, currentHijriMonth)) {
+        remainingDays -= getHijriMonthDays(currentHijriYear, currentHijriMonth);
+        currentHijriMonth++;
+        if (currentHijriMonth > 12) {
+          currentHijriMonth = 1;
+          currentHijriYear++;
+        }
+      }
+      
+      return {
+        year: currentHijriYear,
+        month: currentHijriMonth,
+        day: remainingDays + 1,
+      };
+    }
   }
 
+  // إذا لم يكن هناك override أو التاريخ قبل أي override
   const m = moment(date);
   return {
     year: m.iYear(),
