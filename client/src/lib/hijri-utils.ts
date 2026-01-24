@@ -26,20 +26,16 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
     );
 
-    // البحث عن الـ override المناسب
+    // البحث في الـ overrides
     for (let i = 0; i < sortedOverrides.length; i++) {
       const current = sortedOverrides[i];
       const start = new Date(current.gregorianStartDate);
       start.setHours(0, 0, 0, 0);
       const startTime = start.getTime();
 
-      // حساب عدد أيام الشهر الهجري
       const hijriMonthDays = getHijriMonthDays(current.hijriYear, current.hijriMonth);
-      
-      // نهاية هذا الشهر = بداية + عدد الأيام
       const endTime = startTime + (hijriMonthDays * 24 * 60 * 60 * 1000);
 
-      // إذا كان التاريخ يقع ضمن هذا الـ override
       if (dTime >= startTime && dTime < endTime) {
         const daysDiff = Math.floor((dTime - startTime) / (1000 * 60 * 60 * 24));
         return {
@@ -51,16 +47,13 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
     }
 
     // إذا كان التاريخ بعد آخر override
-    // نحسب الفرق ونضيفه على آخر override
     const lastOverride = sortedOverrides[sortedOverrides.length - 1];
     const lastStart = new Date(lastOverride.gregorianStartDate);
     lastStart.setHours(0, 0, 0, 0);
     
     if (dTime >= lastStart.getTime()) {
-      // حساب عدد الأيام من آخر override
       const daysSinceLastOverride = Math.floor((dTime - lastStart.getTime()) / (1000 * 60 * 60 * 24));
       
-      // بداية من آخر override، نحسب التاريخ الهجري
       let currentHijriYear = lastOverride.hijriYear;
       let currentHijriMonth = lastOverride.hijriMonth;
       let remainingDays = daysSinceLastOverride;
@@ -82,7 +75,6 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
     }
   }
 
-  // إذا لم يكن هناك override أو التاريخ قبل أي override
   const m = moment(date);
   return {
     year: m.iYear(),
@@ -182,25 +174,31 @@ export function getCalendarDays(year: number, month: number, overrides?: HijriMo
   
   const days: DualDate[] = [];
   
+  // أيام الشهر السابق
   for (let i = firstDay - 1; i >= 0; i--) {
     const date = new Date(year, month - 2, daysInPrevMonth - i);
+    date.setHours(0, 0, 0, 0);
     days.push({
       gregorian: date,
       hijri: gregorianToHijri(date, overrides),
     });
   }
   
+  // أيام الشهر الحالي
   for (let i = 1; i <= daysInMonth; i++) {
     const date = new Date(year, month - 1, i);
+    date.setHours(0, 0, 0, 0);
     days.push({
       gregorian: date,
       hijri: gregorianToHijri(date, overrides),
     });
   }
   
+  // أيام الشهر التالي
   const remainingDays = 42 - days.length;
   for (let i = 1; i <= remainingDays; i++) {
     const date = new Date(year, month, i);
+    date.setHours(0, 0, 0, 0);
     days.push({
       gregorian: date,
       hijri: gregorianToHijri(date, overrides),
