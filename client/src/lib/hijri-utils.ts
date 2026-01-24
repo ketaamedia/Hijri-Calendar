@@ -23,7 +23,7 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
   const dTime = d.getTime();
 
   if (overrides && overrides.length > 0) {
-    // Sort overrides chronologically to find the most relevant one
+    // Sort overrides chronologically
     const sortedOverrides = [...overrides].sort((a, b) => 
       new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
     );
@@ -35,18 +35,11 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       start.setHours(0, 0, 0, 0);
       const startTime = start.getTime();
 
-      // Determine end of this override's influence
-      // If there's a next override, it ends there. Otherwise, assume 30 days.
-      let endTime: number;
-      if (i < sortedOverrides.length - 1) {
-        const next = new Date(sortedOverrides[i+1].gregorianStartDate);
-        next.setHours(0, 0, 0, 0);
-        endTime = next.getTime();
-      } else {
-        const fallbackEnd = new Date(startTime);
-        fallbackEnd.setDate(fallbackEnd.getDate() + 30);
-        endTime = fallbackEnd.getTime();
-      }
+      // Calculate the number of days in this Hijri month
+      const hijriMonthDays = getHijriMonthDays(current.hijriYear, current.hijriMonth);
+      
+      // End time is start time + number of days in the Hijri month
+      const endTime = startTime + (hijriMonthDays * 24 * 60 * 60 * 1000);
 
       if (dTime >= startTime && dTime < endTime) {
         const daysDiff = Math.floor((dTime - startTime) / (1000 * 60 * 60 * 24));
@@ -58,6 +51,14 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       }
     }
   }
+
+  const m = moment(date);
+  return {
+    year: m.iYear(),
+    month: m.iMonth() + 1,
+    day: m.iDate(),
+  };
+}
 
   const m = moment(date);
   return {
