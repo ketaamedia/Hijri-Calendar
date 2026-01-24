@@ -6,6 +6,7 @@ import { YearlyView } from "@/components/calendar/YearlyView";
 import { EventList } from "@/components/events/EventList";
 import { EventModal } from "@/components/events/EventModal";
 import { UpcomingEvents } from "@/components/events/UpcomingEvents";
+import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -45,6 +46,7 @@ export default function Home() {
 
   const EventsSidebarContent = () => (
     <>
+      <WeatherWidget />
       <UpcomingEvents />
       <div className="space-y-1 text-right">
         <p className="text-sm font-medium text-foreground" data-testid="text-selected-gregorian">
