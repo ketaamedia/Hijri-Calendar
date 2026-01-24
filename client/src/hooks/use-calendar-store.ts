@@ -57,7 +57,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
   setCurrentDate: (date) => set({ currentDate: date }),
   setSelectedDate: (date) => set({ selectedDate: date }),
-  60→  setView: (view) => set({ view }),
+  setView: (view) => set({ view }),
 
   loadData: async () => {
     set({ isLoading: true });
