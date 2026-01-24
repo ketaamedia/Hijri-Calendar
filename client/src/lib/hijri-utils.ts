@@ -23,21 +23,36 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
   const dTime = d.getTime();
 
   if (overrides && overrides.length > 0) {
-    for (const override of overrides) {
-      const overrideStart = new Date(override.gregorianStartDate);
-      overrideStart.setHours(0, 0, 0, 0);
-      const overrideStartTime = overrideStart.getTime();
+    // Sort overrides chronologically to find the most relevant one
+    const sortedOverrides = [...overrides].sort((a, b) => 
+      new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
+    );
 
-      // Assume Hijri months are 29 or 30 days
-      const nextMonth = new Date(overrideStartTime);
-      nextMonth.setDate(nextMonth.getDate() + 30);
-      const nextMonthTime = nextMonth.getTime();
+    // Find the override that covers this date
+    for (let i = 0; i < sortedOverrides.length; i++) {
+      const current = sortedOverrides[i];
+      const start = new Date(current.gregorianStartDate);
+      start.setHours(0, 0, 0, 0);
+      const startTime = start.getTime();
 
-      if (dTime >= overrideStartTime && dTime < nextMonthTime) {
-        const daysDiff = Math.floor((dTime - overrideStartTime) / (1000 * 60 * 60 * 24));
+      // Determine end of this override's influence
+      // If there's a next override, it ends there. Otherwise, assume 30 days.
+      let endTime: number;
+      if (i < sortedOverrides.length - 1) {
+        const next = new Date(sortedOverrides[i+1].gregorianStartDate);
+        next.setHours(0, 0, 0, 0);
+        endTime = next.getTime();
+      } else {
+        const fallbackEnd = new Date(startTime);
+        fallbackEnd.setDate(fallbackEnd.getDate() + 30);
+        endTime = fallbackEnd.getTime();
+      }
+
+      if (dTime >= startTime && dTime < endTime) {
+        const daysDiff = Math.floor((dTime - startTime) / (1000 * 60 * 60 * 24));
         return {
-          year: override.hijriYear,
-          month: override.hijriMonth,
+          year: current.hijriYear,
+          month: current.hijriMonth,
           day: daysDiff + 1,
         };
       }
