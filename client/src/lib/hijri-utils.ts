@@ -26,38 +26,31 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
       new Date(a.gregorianStartDate).getTime() - new Date(b.gregorianStartDate).getTime()
     );
 
-    // البحث في الـ overrides
-    for (let i = 0; i < sortedOverrides.length; i++) {
-      const current = sortedOverrides[i];
-      const start = new Date(current.gregorianStartDate);
+    // نبحث عن أقرب override قبل أو في هذا التاريخ
+    let applicableOverride = null;
+    let overrideIndex = -1;
+    
+    for (let i = sortedOverrides.length - 1; i >= 0; i--) {
+      const start = new Date(sortedOverrides[i].gregorianStartDate);
       start.setHours(0, 0, 0, 0);
-      const startTime = start.getTime();
-
-      const hijriMonthDays = getHijriMonthDays(current.hijriYear, current.hijriMonth);
-      const endTime = startTime + (hijriMonthDays * 24 * 60 * 60 * 1000);
-
-      if (dTime >= startTime && dTime < endTime) {
-        const daysDiff = Math.floor((dTime - startTime) / (1000 * 60 * 60 * 24));
-        return {
-          year: current.hijriYear,
-          month: current.hijriMonth,
-          day: daysDiff + 1,
-        };
+      
+      if (start.getTime() <= dTime) {
+        applicableOverride = sortedOverrides[i];
+        overrideIndex = i;
+        break;
       }
     }
 
-    // إذا كان التاريخ بعد آخر override
-    const lastOverride = sortedOverrides[sortedOverrides.length - 1];
-    const lastStart = new Date(lastOverride.gregorianStartDate);
-    lastStart.setHours(0, 0, 0, 0);
-    
-    if (dTime >= lastStart.getTime()) {
-      const daysSinceLastOverride = Math.floor((dTime - lastStart.getTime()) / (1000 * 60 * 60 * 24));
+    if (applicableOverride) {
+      const overrideStart = new Date(applicableOverride.gregorianStartDate);
+      overrideStart.setHours(0, 0, 0, 0);
+      const daysSinceOverride = Math.floor((dTime - overrideStart.getTime()) / (1000 * 60 * 60 * 24));
       
-      let currentHijriYear = lastOverride.hijriYear;
-      let currentHijriMonth = lastOverride.hijriMonth;
-      let remainingDays = daysSinceLastOverride;
+      let currentHijriYear = applicableOverride.hijriYear;
+      let currentHijriMonth = applicableOverride.hijriMonth;
+      let remainingDays = daysSinceOverride;
       
+      // نحسب الأشهر والأيام من نقطة الـ override
       while (remainingDays >= getHijriMonthDays(currentHijriYear, currentHijriMonth)) {
         remainingDays -= getHijriMonthDays(currentHijriYear, currentHijriMonth);
         currentHijriMonth++;
@@ -73,8 +66,44 @@ export function gregorianToHijri(date: Date, overrides?: HijriMonthOverride[]): 
         day: remainingDays + 1,
       };
     }
+    
+    // إذا كان التاريخ قبل أول override
+    // نستخدم moment لكن نحاول مزامنته مع أول override
+    const firstOverride = sortedOverrides[0];
+    const firstStart = new Date(firstOverride.gregorianStartDate);
+    firstStart.setHours(0, 0, 0, 0);
+    
+    if (dTime < firstStart.getTime()) {
+      // نحسب كم يوم قبل الـ override
+      const daysBeforeOverride = Math.floor((firstStart.getTime() - dTime) / (1000 * 60 * 60 * 24));
+      
+      let currentHijriYear = firstOverride.hijriYear;
+      let currentHijriMonth = firstOverride.hijriMonth;
+      let daysToSubtract = daysBeforeOverride;
+      
+      // نرجع للخلف من نقطة الـ override
+      while (daysToSubtract > 0) {
+        currentHijriMonth--;
+        if (currentHijriMonth < 1) {
+          currentHijriMonth = 12;
+          currentHijriYear--;
+        }
+        
+        const daysInMonth = getHijriMonthDays(currentHijriYear, currentHijriMonth);
+        if (daysToSubtract <= daysInMonth) {
+          return {
+            year: currentHijriYear,
+            month: currentHijriMonth,
+            day: daysInMonth - daysToSubtract + 1,
+          };
+        }
+        
+        daysToSubtract -= daysInMonth;
+      }
+    }
   }
 
+  // إذا لم يكن هناك override
   const m = moment(date);
   return {
     year: m.iYear(),
