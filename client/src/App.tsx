@@ -1,5 +1,5 @@
 import { useHijriEventManager } from './hooks/useHijriEventManager';
-import { CleanupButton } from './components/CalendarSync/CleanupButton';
+import { CleanupButton } from './components/Calendar/CleanupButton';
 import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
