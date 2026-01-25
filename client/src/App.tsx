@@ -26,15 +26,62 @@ import AttendancePage from "@/pages/attendance";
 import PrayerTimesPage from "@/pages/PrayerTimes";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   sendEventNotifications,
   shouldCheckNotifications,
   markNotificationsChecked,
 } from "@/lib/notifications";
-// ⭐ أضف هذه الـ imports
-import { useHijriEventManager } from './hooks/useHijriEventManager';
-import { CleanupButton } from '@/components/Calendar/CleanupButton';
+import { useHijriEventManager } from "@/hooks/useHijriEventManager";
+
+// مكون زر التنظيف - inline مؤقتاً
+function CleanupButton({ onCleanup }: { onCleanup: () => Promise<number> }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
+  const handleCleanup = async () => {
+    setIsLoading(true);
+    
+    try {
+      const count = await onCleanup();
+      
+      toast({
+        title: count > 0 ? 'تم التنظيف بنجاح' : 'لا توجد أحداث مكررة',
+        description: count > 0 
+          ? `تم حذف ${count} حدث مكرر` 
+          : 'جميع الأحداث فريدة',
+        variant: count > 0 ? 'default' : 'default',
+      });
+    } catch (error) {
+      toast({
+        title: 'فشل التنظيف',
+        description: 'حدث خطأ أثناء تنظيف الأحداث المكررة',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Button
+      onClick={handleCleanup}
+      disabled={isLoading}
+      variant="outline"
+      size="sm"
+      className="gap-2"
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="h-4 w-4" />
+      )}
+      {isLoading ? 'جاري التنظيف...' : 'تنظيف'}
+    </Button>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -122,7 +169,7 @@ function AppContent() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { loadData, isLoading, events, settings, hijriOverrides, generateAutoEvents } = useCalendarStore();
   
-  // ⭐ أضف مدير الأحداث الهجرية هنا
+  // ⭐ إضافة مدير الأحداث الهجرية
   const { 
     isLoading: hijriLoading, 
     error: hijriError, 
@@ -195,12 +242,12 @@ function AppContent() {
         <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md">
           <h2 className="text-destructive font-bold mb-2">حدث خطأ في التقويم الهجري</h2>
           <p className="text-destructive/80 text-sm mb-4">{hijriError}</p>
-          <button 
+          <Button 
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            className="w-full"
           >
             إعادة المحاولة
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -229,7 +276,7 @@ function AppContent() {
           <header className="flex items-center justify-between gap-2 p-2 border-b bg-background sticky top-0 z-10" dir="rtl">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
-              {/* ⭐ أضف زر التنظيف في الهيدر */}
+              {/* ⭐ زر التنظيف */}
               <CleanupButton onCleanup={cleanupDuplicates} />
               <NotificationBell />
             </div>
@@ -243,7 +290,6 @@ function AppContent() {
   );
 }
 
-// ⭐ دالة App واحدة فقط - احذف الأخرى المكررة
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
