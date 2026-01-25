@@ -52,18 +52,12 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export const hijriMonthOverrideSchema = z.object({
   id: z.string(),
-  hijriYear: z.number(),
-  hijriMonth: z.number(),
-  gregorianStartDate: z.string(),
+  year: z.number(),
+  month: z.number(),
+  adjustmentDays: z.number(),
+  timestamp: z.number().optional(),
+  userId: z.string().optional(),
 });
-
-export interface HijriMonthOverride {
-  year: number;
-  month: number;
-  adjustmentDays: number;
-  timestamp?: number;  // ⭐ جديد
-  userId?: string;     // ⭐ جديد (اختياري)
-}
 
 export type HijriMonthOverride = z.infer<typeof hijriMonthOverrideSchema>;
 
