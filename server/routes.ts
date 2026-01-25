@@ -198,6 +198,11 @@ export async function registerRoutes(
     const user = req.user as User;
     const validatedData = settingsSchema.parse(req.body);
     
+    console.log('Saving settings:', {
+      userId: user.id,
+      validatedData,
+    });
+    
     const userSettings = await storage.saveSettings({
       userId: user.id,
       hijriEnabled: validatedData.hijriEnabled,
@@ -221,6 +226,7 @@ export async function registerRoutes(
       weatherLocationName: userSettings.weatherLocationName,
     });
   } catch (error) {
+    console.error('Failed to save settings:', error); // ✅ أضف هذا السطر
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
