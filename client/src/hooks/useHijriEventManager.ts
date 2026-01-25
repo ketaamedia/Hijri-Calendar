@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { HijriEventManager } from '@/lib/hijri/event-manager';
-import { PersistentStorageAdapter } from '@/lib/storage/storage-adapter';
+import { HijriEventManager } from '@/lib/event-manager';
+import { PersistentStorageAdapter } from '@/lib/storage-adapter';
 import type { Event, HijriMonthOverride } from '@shared/schema';
 
 export function useHijriEventManager() {
