@@ -1,16 +1,17 @@
 import type { Event, HijriMonthOverride } from "@shared/schema";
 import type { StorageAdapter } from "./types";
+import { useCalendarStore } from "@/hooks/use-calendar-store";
 
 const EVENTS_KEY = 'hijri_calendar_events';
 const OVERRIDES_KEY = 'hijri_month_overrides';
-const REMOTE_OVERRIDES_KEY = 'global_hijri_overrides';
 
 export class PersistentStorageAdapter implements StorageAdapter {
   
   async getAllEvents(): Promise<Event[]> {
     try {
-      const result = await window.storage.get(EVENTS_KEY);
-      return result ? JSON.parse(result.value) : [];
+      // استخدم localStorage بدلاً من window.storage
+      const data = localStorage.getItem(EVENTS_KEY);
+      return data ? JSON.parse(data) : [];
     } catch (error) {
       console.log('No events found, starting fresh');
       return [];
@@ -20,7 +21,7 @@ export class PersistentStorageAdapter implements StorageAdapter {
   async addEvents(events: Event[]): Promise<void> {
     const existing = await this.getAllEvents();
     const updated = [...existing, ...events];
-    await window.storage.set(EVENTS_KEY, JSON.stringify(updated));
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(updated));
   }
   
   async updateEvents(events: Event[]): Promise<void> {
@@ -28,27 +29,27 @@ export class PersistentStorageAdapter implements StorageAdapter {
     const eventMap = new Map(events.map(e => [e.id, e]));
     
     const updated = existing.map(e => eventMap.get(e.id) || e);
-    await window.storage.set(EVENTS_KEY, JSON.stringify(updated));
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(updated));
   }
   
   async deleteEvents(ids: string[]): Promise<void> {
     const existing = await this.getAllEvents();
     const idsSet = new Set(ids);
     const filtered = existing.filter(e => !idsSet.has(e.id));
-    await window.storage.set(EVENTS_KEY, JSON.stringify(filtered));
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(filtered));
   }
   
   async getOverrides(): Promise<HijriMonthOverride[]> {
     try {
-      const result = await window.storage.get(OVERRIDES_KEY);
-      return result ? JSON.parse(result.value) : [];
+      const data = localStorage.getItem(OVERRIDES_KEY);
+      return data ? JSON.parse(data) : [];
     } catch (error) {
       return [];
     }
   }
   
   async saveOverrides(overrides: HijriMonthOverride[]): Promise<void> {
-    await window.storage.set(OVERRIDES_KEY, JSON.stringify(overrides));
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
   }
   
   async addOverride(override: HijriMonthOverride): Promise<void> {
@@ -61,18 +62,26 @@ export class PersistentStorageAdapter implements StorageAdapter {
   
   async fetchRemoteOverrides(): Promise<HijriMonthOverride[]> {
     try {
-      const result = await window.storage.get(REMOTE_OVERRIDES_KEY, true);
-      return result ? JSON.parse(result.value) : [];
+      // استخدم API لجلب التعديلات من السيرفر
+      const response = await fetch('/api/hijri-overrides');
+      if (!response.ok) return [];
+      return await response.json();
     } catch (error) {
+      console.error('Failed to fetch remote overrides:', error);
       return [];
     }
   }
   
   async uploadOverrides(overrides: HijriMonthOverride[]): Promise<void> {
-    await window.storage.set(
-      REMOTE_OVERRIDES_KEY,
-      JSON.stringify(overrides),
-      true // shared = true
-    );
+    try {
+      // رفع التعديلات للسيرفر
+      await fetch('/api/hijri-overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(overrides)
+      });
+    } catch (error) {
+      console.error('Failed to upload overrides:', error);
+    }
   }
 }
