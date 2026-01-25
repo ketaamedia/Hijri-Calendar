@@ -67,7 +67,7 @@ export type NumeralSystem = z.infer<typeof numeralSystemSchema>;
 
 export const settingsSchema = z.object({
   hijriEnabled: z.boolean().default(true),
-  hijriReference: hijriReferenceSchema.default("khamenei"),
+  hijriReference: hijriReferenceSchema.default("manual"),
   defaultView: z.enum(["monthly", "weekly", "yearly"]).default("monthly"),
   numeralSystem: numeralSystemSchema.default("arabic"),
   notificationsEnabled: z.boolean().default(true),

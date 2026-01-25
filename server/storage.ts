@@ -249,10 +249,13 @@ export class DatabaseStorage implements IStorage {
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
         hijri_enabled BOOLEAN DEFAULT TRUE,
-        hijri_reference TEXT DEFAULT 'khamenei',
+        hijri_reference TEXT DEFAULT 'manual',
         default_view TEXT DEFAULT 'monthly',
         numeral_system TEXT DEFAULT 'arabic',
         notifications_enabled BOOLEAN DEFAULT TRUE,
+        weather_lat TEXT DEFAULT '33.9231',
+        weather_lon TEXT DEFAULT '36.0028',
+        weather_location_name TEXT DEFAULT 'بيت شاما',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

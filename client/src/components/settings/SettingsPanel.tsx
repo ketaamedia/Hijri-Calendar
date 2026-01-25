@@ -153,21 +153,17 @@ export function SettingsPanel() {
               onValueChange={(value: "khamenei" | "manual") =>
                 updateSettings({ hijriReference: value })
               }
+              disabled={true}
             >
               <SelectTrigger data-testid="select-hijri-reference">
-                <SelectValue />
+                <SelectValue placeholder="تحديد يدوي" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="khamenei" data-testid="option-reference-khamenei">
-                  السيد القائد علي الخامنئي (دام ظله)
-                </SelectItem>
                 <SelectItem value="manual" data-testid="option-reference-manual">تحديد يدوي</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground text-right" data-testid="text-reference-description">
-              {settings.hijriReference === "khamenei"
-                ? "التقويم الهجري معتمد على الرؤية الشرعية لثبوت الهلال حسب رأي سماحة السيد القائد"
-                : "يمكنك تحديد بداية كل شهر هجري يدوياً"}
+              يمكنك تحديد بداية كل شهر هجري يدوياً وفق الإعلانات الرسمية
             </p>
           </div>
 
