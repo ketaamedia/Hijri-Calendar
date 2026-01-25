@@ -34,7 +34,7 @@ import {
 } from "@/lib/notifications";
 // ⭐ أضف هذه الـ imports
 import { useHijriEventManager } from './hooks/useHijriEventManager';
-import { CleanupButton } from './components/Calendar/CleanupButton';
+import { CleanupButton } from '@/components/Calendar/CleanupButton';
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
