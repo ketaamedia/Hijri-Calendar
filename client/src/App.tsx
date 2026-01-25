@@ -1,3 +1,5 @@
+import { useHijriEventManager } from './hooks/useHijriEventManager';
+import { CleanupButton } from './components/CalendarSync/CleanupButton';
 import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -32,39 +34,56 @@ import {
   shouldCheckNotifications,
   markNotificationsChecked,
 } from "@/lib/notifications";
-import { useHijriEventManager } from './hooks/useHijriEventManager';
-import { CleanupButton } from './components/CalendarSync/CleanupButton';
 
 function App() {
+  // ⭐ أضف هذا في بداية دالة App
   const { 
-    isLoading, 
-    error, 
-    events, 
+    isLoading: hijriLoading, 
+    error: hijriError, 
+    events: hijriEvents, 
     overrides, 
     saveOverride, 
     cleanupDuplicates 
   } = useHijriEventManager();
-  
-  if (isLoading) {
-    return <div>جاري التحميل...</div>;
-  }
-  
-  if (error) {
-    return <div>خطأ: {error}</div>;
-  }
-  
-  return (
-    <div className="p-4">
-      <h1>التقويم الهجري</h1>
-      
-      {/* زر التنظيف */}
-      <CleanupButton onCleanup={cleanupDuplicates} />
-      
-      {/* عرض الأحداث */}
-      <div className="mt-4">
-        <h2>الأحداث ({events.length})</h2>
-        {/* باقي الكود... */}
+
+  // باقي الكود الموجود لديك...
+  // const [state, setState] = useState(...);
+  // ...
+
+  // ⭐ أضف معالجة التحميل والأخطاء
+  if (hijriLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل التقويم الهجري...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (hijriError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <h2 className="text-red-800 font-bold mb-2">حدث خطأ</h2>
+          <p className="text-red-600">{hijriError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* ⭐ أضف زر التنظيف في مكان مناسب في الواجهة */}
+      <div className="p-4 bg-gray-50 border-b">
+        <div className="max-w-7xl mx-auto">
+          <CleanupButton onCleanup={cleanupDuplicates} />
+        </div>
+      </div>
+
+      {/* باقي الكود الموجود في return */}
+      {/* ... */}
     </div>
   );
 }
