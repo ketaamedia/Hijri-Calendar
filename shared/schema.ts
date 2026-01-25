@@ -66,14 +66,14 @@ export const numeralSystemSchema = z.enum(["arabic", "hindi"]);
 export type NumeralSystem = z.infer<typeof numeralSystemSchema>;
 
 export const settingsSchema = z.object({
-  hijriEnabled: z.boolean().default(true),
-  hijriReference: hijriReferenceSchema.default("manual"),
-  defaultView: z.enum(["monthly", "weekly", "yearly"]).default("monthly"),
-  numeralSystem: numeralSystemSchema.default("arabic"),
-  notificationsEnabled: z.boolean().default(true),
-  weatherLat: z.number().default(33.9231),
-  weatherLon: z.number().default(36.0028),
-  weatherLocationName: z.string().default("بيت شاما"),
+  hijriEnabled: z.boolean(),
+  hijriReference: z.enum(["khamenei", "manual"]),
+  defaultView: z.enum(["monthly", "weekly", "yearly"]),
+  numeralSystem: z.enum(["arabic", "hindi"]),
+  notificationsEnabled: z.boolean(),
+  weatherLat: z.number().optional(), // تأكد أنه number
+  weatherLon: z.number().optional(), // تأكد أنه number
+  weatherLocationName: z.string().optional(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
