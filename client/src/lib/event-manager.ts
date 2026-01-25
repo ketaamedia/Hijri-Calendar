@@ -1,7 +1,7 @@
 import type { Event, HijriMonthOverride } from "@shared/schema";
-import type { StorageAdapter } from "../storage/types";
+import type { StorageAdapter } from "./types";
 import { getCurrentHijriYear } from "./hijri-utils";
-import { generateHijriMonthStartEvents, updateHijriMonthStartEvents, getYearsWithAutoEvents } from "./hijri-events";
+import { generateHijriMonthStartEvents, updateHijriMonthStartEvents } from "./auto-events";
 import { syncOverrides, hasEventsForYear } from "./event-sync";
 import { removeDuplicateEvents } from "./event-cleanup";
 
