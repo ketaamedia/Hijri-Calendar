@@ -193,54 +193,40 @@ export async function registerRoutes(
 
   // ==================== Settings Routes ====================
 
-  app.get("/api/settings", requireAuth, async (req, res) => {
-    try {
-      const user = req.user as User;
-      let userSettings = await storage.getSettings(user.id);
-      if (!userSettings) {
-        userSettings = await storage.saveSettings({
-          userId: user.id,
-          hijriEnabled: true,
-          hijriReference: "khamenei",
-          defaultView: "monthly",
-          numeralSystem: "arabic",
-          notificationsEnabled: true,
-        });
-      }
-      res.json({
-        hijriEnabled: userSettings.hijriEnabled,
-        hijriReference: userSettings.hijriReference,
-        defaultView: userSettings.defaultView,
-        numeralSystem: userSettings.numeralSystem,
-        notificationsEnabled: userSettings.notificationsEnabled,
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch settings" });
-    }
-  });
-
   app.put("/api/settings", requireAuth, async (req, res) => {
-    try {
-      const user = req.user as User;
-      const validatedData = settingsSchema.parse(req.body);
-      const userSettings = await storage.saveSettings({
-        userId: user.id,
-        ...validatedData,
-      });
-      res.json({
-        hijriEnabled: userSettings.hijriEnabled,
-        hijriReference: userSettings.hijriReference,
-        defaultView: userSettings.defaultView,
-        numeralSystem: userSettings.numeralSystem,
-        notificationsEnabled: userSettings.notificationsEnabled,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      res.status(500).json({ error: "Failed to save settings" });
+  try {
+    const user = req.user as User;
+    const validatedData = settingsSchema.parse(req.body);
+    
+    const userSettings = await storage.saveSettings({
+      userId: user.id,
+      hijriEnabled: validatedData.hijriEnabled,
+      hijriReference: validatedData.hijriReference,
+      defaultView: validatedData.defaultView,
+      numeralSystem: validatedData.numeralSystem,
+      notificationsEnabled: validatedData.notificationsEnabled,
+      weatherLat: validatedData.weatherLat ? String(validatedData.weatherLat) : undefined,
+      weatherLon: validatedData.weatherLon ? String(validatedData.weatherLon) : undefined,
+      weatherLocationName: validatedData.weatherLocationName,
+    });
+    
+    res.json({
+      hijriEnabled: userSettings.hijriEnabled,
+      hijriReference: userSettings.hijriReference,
+      defaultView: userSettings.defaultView,
+      numeralSystem: userSettings.numeralSystem,
+      notificationsEnabled: userSettings.notificationsEnabled,
+      weatherLat: userSettings.weatherLat,
+      weatherLon: userSettings.weatherLon,
+      weatherLocationName: userSettings.weatherLocationName,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
     }
-  });
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
 
   // ==================== User Management Routes (Admin Only) ====================
 
