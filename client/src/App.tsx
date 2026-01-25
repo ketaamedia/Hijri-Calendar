@@ -1,5 +1,3 @@
-import { useHijriEventManager } from './hooks/useHijriEventManager';
-import { CleanupButton } from './components/Calendar/CleanupButton';
 import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -34,59 +32,9 @@ import {
   shouldCheckNotifications,
   markNotificationsChecked,
 } from "@/lib/notifications";
-
-function App() {
-  // ⭐ أضف هذا في بداية دالة App
-  const { 
-    isLoading: hijriLoading, 
-    error: hijriError, 
-    events: hijriEvents, 
-    overrides, 
-    saveOverride, 
-    cleanupDuplicates 
-  } = useHijriEventManager();
-
-  // باقي الكود الموجود لديك...
-  // const [state, setState] = useState(...);
-  // ...
-
-  // ⭐ أضف معالجة التحميل والأخطاء
-  if (hijriLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل التقويم الهجري...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (hijriError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h2 className="text-red-800 font-bold mb-2">حدث خطأ</h2>
-          <p className="text-red-600">{hijriError}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {/* ⭐ أضف زر التنظيف في مكان مناسب في الواجهة */}
-      <div className="p-4 bg-gray-50 border-b">
-        <div className="max-w-7xl mx-auto">
-          <CleanupButton onCleanup={cleanupDuplicates} />
-        </div>
-      </div>
-
-      {/* باقي الكود الموجود في return */}
-      {/* ... */}
-    </div>
-  );
-}
+// ⭐ أضف هذه الـ imports
+import { useHijriEventManager } from './hooks/useHijriEventManager';
+import { CleanupButton } from './components/Calendar/CleanupButton';
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -173,6 +121,14 @@ function Router() {
 function AppContent() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { loadData, isLoading, events, settings, hijriOverrides, generateAutoEvents } = useCalendarStore();
+  
+  // ⭐ أضف مدير الأحداث الهجرية هنا
+  const { 
+    isLoading: hijriLoading, 
+    error: hijriError, 
+    cleanupDuplicates 
+  } = useHijriEventManager();
+  
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark";
@@ -220,6 +176,36 @@ function AppContent() {
     "--sidebar-width-icon": "3.5rem",
   };
 
+  // ⭐ معالجة حالة التحميل للتقويم الهجري
+  if (hijriLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">جاري تهيئة التقويم الهجري...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ⭐ معالجة الأخطاء
+  if (hijriError) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md">
+          <h2 className="text-destructive font-bold mb-2">حدث خطأ في التقويم الهجري</h2>
+          <p className="text-destructive/80 text-sm mb-4">{hijriError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background" data-testid="loading-screen">
@@ -242,7 +228,11 @@ function AppContent() {
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between gap-2 p-2 border-b bg-background sticky top-0 z-10" dir="rtl">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <NotificationBell />
+            <div className="flex items-center gap-2">
+              {/* ⭐ أضف زر التنظيف في الهيدر */}
+              <CleanupButton onCleanup={cleanupDuplicates} />
+              <NotificationBell />
+            </div>
           </header>
           <main className="flex-1 overflow-auto">
             <Router />
@@ -253,6 +243,7 @@ function AppContent() {
   );
 }
 
+// ⭐ دالة App واحدة فقط - احذف الأخرى المكررة
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
