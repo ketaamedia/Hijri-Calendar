@@ -57,6 +57,14 @@ export const hijriMonthOverrideSchema = z.object({
   gregorianStartDate: z.string(),
 });
 
+export interface HijriMonthOverride {
+  year: number;
+  month: number;
+  adjustmentDays: number;
+  timestamp?: number;  // ⭐ جديد
+  userId?: string;     // ⭐ جديد (اختياري)
+}
+
 export type HijriMonthOverride = z.infer<typeof hijriMonthOverrideSchema>;
 
 export const insertHijriMonthOverrideSchema = hijriMonthOverrideSchema.omit({ id: true });
