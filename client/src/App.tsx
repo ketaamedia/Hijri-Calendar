@@ -32,6 +32,42 @@ import {
   shouldCheckNotifications,
   markNotificationsChecked,
 } from "@/lib/notifications";
+import { useHijriEventManager } from './hooks/useHijriEventManager';
+import { CleanupButton } from './components/CalendarSync/CleanupButton';
+
+function App() {
+  const { 
+    isLoading, 
+    error, 
+    events, 
+    overrides, 
+    saveOverride, 
+    cleanupDuplicates 
+  } = useHijriEventManager();
+  
+  if (isLoading) {
+    return <div>جاري التحميل...</div>;
+  }
+  
+  if (error) {
+    return <div>خطأ: {error}</div>;
+  }
+  
+  return (
+    <div className="p-4">
+      <h1>التقويم الهجري</h1>
+      
+      {/* زر التنظيف */}
+      <CleanupButton onCleanup={cleanupDuplicates} />
+      
+      {/* عرض الأحداث */}
+      <div className="mt-4">
+        <h2>الأحداث ({events.length})</h2>
+        {/* باقي الكود... */}
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
