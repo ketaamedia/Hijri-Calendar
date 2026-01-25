@@ -52,11 +52,9 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export const hijriMonthOverrideSchema = z.object({
   id: z.string(),
-  year: z.number(),
-  month: z.number(),
-  adjustmentDays: z.number(),
-  timestamp: z.number().optional(),
-  userId: z.string().optional(),
+  hijriYear: z.number(),
+  hijriMonth: z.number(),
+  gregorianStartDate: z.string(),
 });
 
 export type HijriMonthOverride = z.infer<typeof hijriMonthOverrideSchema>;
@@ -73,6 +71,9 @@ export const settingsSchema = z.object({
   defaultView: z.enum(["monthly", "weekly", "yearly"]).default("monthly"),
   numeralSystem: numeralSystemSchema.default("arabic"),
   notificationsEnabled: z.boolean().default(true),
+  weatherLat: z.number().default(33.9231),
+  weatherLon: z.number().default(36.0028),
+  weatherLocationName: z.string().default("بيت شاما"),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -226,6 +227,9 @@ export const settings = pgTable("settings", {
   defaultView: defaultViewEnum("default_view").notNull().default("monthly"),
   numeralSystem: numeralSystemEnum("numeral_system").notNull().default("arabic"),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  weatherLat: text("weather_lat").default("33.9231"),
+  weatherLon: text("weather_lon").default("36.0028"),
+  weatherLocationName: text("weather_location_name").default("بيت شاما"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

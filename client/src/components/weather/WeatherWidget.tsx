@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, Sun, Thermometer } from "lucide-react";
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, Sun, Thermometer, Loader2 } from "lucide-react";
+import { useCalendarStore } from "@/hooks/use-calendar-store";
 
 interface WeatherData {
   daily: {
@@ -30,18 +31,23 @@ const WEATHER_INTERPRETATION: Record<number, { label: string; icon: any }> = {
   95: { label: "عواصف رعدية", icon: CloudLightning },
 };
 
-export function WeatherWidget() {
+interface WeatherWidgetProps {
+  compact?: boolean;
+}
+
+export function WeatherWidget({ compact = false }: WeatherWidgetProps) {
+  const { settings, selectedDate } = useCalendarStore();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Beit Shama coordinates (approximate based on search)
-  // Latitude: 33.9231, Longitude: 36.0028
-  const lat = 33.9231;
-  const lon = 36.0028;
+  const lat = settings.weatherLat || 33.9231;
+  const lon = settings.weatherLon || 36.0028;
+  const locationName = settings.weatherLocationName || "بيت شاما";
 
   useEffect(() => {
     async function fetchWeather() {
+      setLoading(true);
       try {
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`
@@ -57,26 +63,79 @@ export function WeatherWidget() {
       }
     }
     fetchWeather();
-  }, []);
+  }, [lat, lon]);
 
-  if (loading) return <Card className="mb-4 animate-pulse"><CardContent className="h-32" /></Card>;
+  if (loading) return (
+    <Card className="mb-4 animate-pulse">
+      <CardContent className="h-24 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
+      </CardContent>
+    </Card>
+  );
   if (error || !weather) return null;
 
   const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+  // If in compact mode and a date is selected, find the weather for that date if it's within the next 7 days
+  let displayDays = weather.daily.time.slice(0, 5);
+  let isSingleDay = false;
+
+  if (compact && selectedDate) {
+    const selectedDateStr = selectedDate.toISOString().split("T")[0];
+    const dayIndex = weather.daily.time.findIndex(t => t === selectedDateStr);
+    
+    if (dayIndex !== -1) {
+      displayDays = [weather.daily.time[dayIndex]];
+      isSingleDay = true;
+    }
+  }
+
+  if (isSingleDay) {
+    const i = weather.daily.time.findIndex(t => t === displayDays[0]);
+    const code = weather.daily.weathercode[i];
+    const interpretation = WEATHER_INTERPRETATION[code] || { label: "غير معروف", icon: Cloud };
+    const WeatherIcon = interpretation.icon;
+
+    return (
+      <Card className="mb-4 overflow-hidden border-primary/20 bg-card" data-testid="weather-widget-compact">
+        <CardContent className="p-3">
+          <div className="flex flex-row-reverse items-center justify-between">
+            <div className="flex flex-row-reverse items-center gap-3">
+              <WeatherIcon className="h-8 w-8 text-primary" />
+              <div className="text-right">
+                <p className="text-xs font-bold text-foreground">{interpretation.label}</p>
+                <p className="text-[10px] text-muted-foreground">{locationName}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-foreground leading-none">
+                {Math.round(weather.daily.temperature_2m_max[i])}°
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                الصغرى {Math.round(weather.daily.temperature_2m_min[i])}°
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mb-6 overflow-hidden border-primary/20 bg-gradient-to-br from-background to-accent/10" data-testid="weather-widget">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-sm font-bold flex flex-row-reverse items-center gap-2">
           <Sun className="h-4 w-4 text-orange-500" />
-          توقعات الطقس - بيت شاما
+          توقعات الطقس - {locationName}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pb-4">
         <div className="flex flex-row-reverse justify-between gap-1">
-          {weather.daily.time.slice(0, 5).map((time, i) => {
+          {displayDays.map((time) => {
+            const i = weather.daily.time.indexOf(time);
             const date = new Date(time);
-            const dayName = i === 0 ? "اليوم" : dayNames[date.getDay()];
+            const today = new Date().toISOString().split("T")[0];
+            const dayName = time === today ? "اليوم" : dayNames[date.getDay()];
             const code = weather.daily.weathercode[i];
             const interpretation = WEATHER_INTERPRETATION[code] || { label: "غير معروف", icon: Cloud };
             const WeatherIcon = interpretation.icon;

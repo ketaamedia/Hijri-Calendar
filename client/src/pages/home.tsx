@@ -46,7 +46,7 @@ export default function Home() {
 
   const EventsSidebarContent = () => (
     <>
-      <WeatherWidget />
+      <WeatherWidget compact />
       <UpcomingEvents />
       <div className="space-y-1 text-right">
         <p className="text-sm font-medium text-foreground" data-testid="text-selected-gregorian">
@@ -76,6 +76,12 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full" data-testid="home-page">
       <CalendarHeader />
+      
+      {!selectedDate && (
+        <div className="p-4 lg:px-6">
+          <WeatherWidget />
+        </div>
+      )}
       
       <div className="flex flex-row-reverse flex-1 overflow-hidden">
         <div className="flex-1 overflow-auto bg-background" data-testid="calendar-main">

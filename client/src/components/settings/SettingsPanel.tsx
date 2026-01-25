@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCalendarStore } from "@/hooks/use-calendar-store";
 import { hijriMonthNames } from "@shared/schema";
 import { getCurrentHijriYear, toArabicNumerals } from "@/lib/hijri-utils";
-import { Plus, Trash2, Settings, Bell, BellOff, Calendar, Loader2 } from "lucide-react";
+import { Plus, Trash2, Settings, Bell, BellOff, Calendar, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   requestNotificationPermission,
@@ -57,8 +57,7 @@ export function SettingsPanel() {
   };
 
   const handleAddOverride = async () => {
-    const id = crypto.randomUUID();
-    await addHijriOverride({ ...newOverride, id });
+    await addHijriOverride(newOverride);
     setNewOverride({
       hijriYear: getCurrentHijriYear(),
       hijriMonth: 1,
@@ -197,6 +196,46 @@ export function SettingsPanel() {
             <p className="text-xs text-muted-foreground text-right">
               اختر نظام الأرقام المفضل لديك لعرض التواريخ
             </p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <Label className="flex items-center gap-2 flex-row-reverse">
+              <MapPin className="h-4 w-4" />
+              إعدادات الطقس
+            </Label>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-xs">اسم المنطقة</Label>
+                <Input 
+                  value={settings.weatherLocationName}
+                  onChange={(e) => updateSettings({ weatherLocationName: e.target.value })}
+                  placeholder="بيت شاما"
+                  className="text-right"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label className="text-xs">خط الطول (Lon)</Label>
+                  <Input 
+                    type="number"
+                    step="0.0001"
+                    value={settings.weatherLon}
+                    onChange={(e) => updateSettings({ weatherLon: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">خط العرض (Lat)</Label>
+                  <Input 
+                    type="number"
+                    step="0.0001"
+                    value={settings.weatherLat}
+                    onChange={(e) => updateSettings({ weatherLat: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
